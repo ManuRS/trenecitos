@@ -1,5 +1,5 @@
-/* Trenecitos · estilo "panel de andén", sobrio: tinta casi negra, ámbar para lo que cuenta atrás,
-   tipografía condensada de señalética y monoespaciada para los datos pequeños. */
+/* Trenecitos · estilo "panel de andén", sobrio: tinta casi negra, rojo para lo que importa (acento y cuenta atrás),
+   ámbar solo para retrasos, tipografía condensada de señalética y monoespaciada para los datos pequeños. */
 
 @font-face { font-family: 'Barlow Condensed'; font-weight: 500; font-display: swap; src: url(fonts/barlow-condensed-latin-500-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/npm/@fontsource/barlow-condensed@5/files/barlow-condensed-latin-500-normal.woff2) format('woff2'); }
 @font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(fonts/barlow-condensed-latin-600-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/npm/@fontsource/barlow-condensed@5/files/barlow-condensed-latin-600-normal.woff2) format('woff2'); }
@@ -15,12 +15,15 @@
   --ink: #ece6d8;
   --dim: #968f82;
   --faint: #5e594f;
-  --amber: #f2a81d;
-  --red: #f0614b;
+  --accent: #e5202a;      /* rojo (color de la línea C7 en el GTFS de Renfe) */
+  --accent-hi: #ff4d52;   /* el mismo rojo, más claro, para texto sobre fondo oscuro */
+  --warn: #f2a81d;        /* retrasos y avisos */
+  --red: var(--accent-hi);
   --green: #7cc27f;
   --cond: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --pad: 16px;
+  --w: 520px;             /* ancho del contenido: una columna */
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -34,39 +37,41 @@ body.no-scroll { overflow: hidden; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; -webkit-tap-highlight-color: transparent; }
 h1, h2, h3, p { margin: 0; }
 s { text-decoration-thickness: 1.5px; }
-:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
 svg { display: block; }
 
 /* ---------- Barra superior ---------- */
 
 .top {
   position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
-  padding: calc(12px + env(safe-area-inset-top)) var(--pad) 12px; background: var(--bg); border-bottom: 1px solid var(--rule);
+  padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: 12px;
+  padding-inline: max(var(--pad), calc(50% - var(--w) / 2 + var(--pad)));
+  background: var(--bg); border-bottom: 1px solid var(--rule);
 }
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand__mark { width: 22px; height: 22px; fill: var(--amber); }
+.brand__mark { width: 22px; height: 22px; fill: var(--accent); }
 .brand h1 { font: 700 26px/1 var(--cond); letter-spacing: .09em; text-transform: uppercase; }
 
 .btn-add {
   display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 11px;
-  border: 1.5px solid var(--amber); border-radius: 2px; color: var(--amber);
+  border: 1.5px solid var(--accent); border-radius: 2px; color: var(--accent-hi);
   font: 600 16px/1 var(--cond); letter-spacing: .08em; text-transform: uppercase;
 }
 .btn-add svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
-.btn-add:hover { background: var(--amber); color: var(--bg); }
+.btn-add:hover { background: var(--accent); color: #fff; }
 .btn-add:disabled { border-color: var(--rule); color: var(--faint); background: none; cursor: default; }
 .btn-add--big { justify-content: center; width: 100%; padding: 14px; font-size: 18px; }
 
 .demo {
-  margin: 0; padding: 7px var(--pad); background: var(--panel-2); border-bottom: 1px solid var(--rule);
+  margin: 0; padding: 7px max(var(--pad), calc(50% - var(--w) / 2 + var(--pad))); background: var(--panel-2); border-bottom: 1px solid var(--rule);
   font: 400 11.5px/1.2 var(--mono); color: var(--dim); letter-spacing: .02em;
 }
 
 /* ---------- Tablero ---------- */
 
 .board {
-  display: grid; gap: 14px; padding: var(--pad); max-width: 1480px; margin: 0 auto; align-items: start;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 410px), 1fr));
+  display: grid; gap: 14px; padding: var(--pad); max-width: var(--w); margin: 0 auto; align-items: start;
+  grid-template-columns: minmax(0, 1fr);
 }
 .foot { padding: 20px var(--pad) 28px; text-align: center; font: 400 11px/1.3 var(--mono); color: var(--faint); }
 
@@ -128,13 +133,15 @@ svg { display: block; }
 .tr__eta { text-align: right; line-height: .9; color: var(--ink); }
 .tr__eta b { display: block; font: 700 40px/.9 var(--cond); font-variant-numeric: tabular-nums; }
 .tr__eta i { display: block; margin-top: 3px; font: 400 11px/1 var(--mono); font-style: normal; color: var(--dim); }
-.tr__eta.is-soon b { color: var(--amber); }
+.tr__eta.is-soon b { color: var(--accent-hi); }
 .tr__state { grid-column: 2 / -1; display: flex; align-items: center; gap: 8px; font: 500 11.5px/1.2 var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
 .tr__state::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
 .tr__state--ok::before { background: var(--green); }
 .tr__state--ok { color: var(--ink); }
-.tr__state--late, .tr__state--off { color: var(--red); }
-.tr__state--late::before, .tr__state--off::before { background: var(--red); }
+.tr__state--late { color: var(--warn); }
+.tr__state--late::before { background: var(--warn); }
+.tr__state--off { color: var(--accent-hi); }
+.tr__state--off::before { background: var(--accent-hi); }
 .tr__state--sched::before { background: none; border: 1.5px solid var(--dim); }
 
 /* El primer tren manda: es el que decide si corres. */
@@ -182,7 +189,7 @@ svg { display: block; }
 .hero__eta { text-align: right; color: var(--ink); line-height: .85; }
 .hero__eta b { font: 700 64px/.85 var(--cond); font-variant-numeric: tabular-nums; }
 .hero__eta i { font: 400 12px/1 var(--mono); font-style: normal; color: var(--dim); }
-.hero__eta.is-soon b { color: var(--amber); }
+.hero__eta.is-soon b { color: var(--accent-hi); }
 .hero__sub { margin-top: 12px; font: 400 12px/1.4 var(--mono); color: var(--dim); }
 
 .now { padding: 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; }
@@ -195,7 +202,7 @@ svg { display: block; }
 .kv h3 { margin-bottom: 6px; }
 .kv__v { font: 700 28px/1 var(--cond); }
 .kv__v--ok { color: var(--green); }
-.kv__v--late { color: var(--red); }
+.kv__v--late { color: var(--warn); }
 
 /* Recorrido: línea vertical con paradas; el tramo del usuario va en tinta, el resto apagado. */
 .stops { list-style: none; margin: 0; padding: 0; }
@@ -216,21 +223,20 @@ svg { display: block; }
 .st__time s { margin-right: 6px; color: var(--faint); }
 .st.passed .st__name, .st.passed .st__time { color: var(--faint); }
 .tag { margin-left: 8px; padding: 2px 5px; border: 1px solid var(--dim); border-radius: 2px; font: 500 10px/1 var(--mono); font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); vertical-align: 3px; }
-.st.here .st__dot { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 0 4px rgba(242, 168, 29, .22); }
-.st.here .st__name { color: var(--amber); }
+.st.here .st__dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px rgba(229, 32, 42, .28); }
+.st.here .st__name { color: var(--accent-hi); }
 
-.alert { padding: 12px 14px; border: 1px solid var(--rule); border-left: 3px solid var(--amber); border-radius: 2px; background: var(--panel); font: 400 14px/1.45 system-ui, sans-serif; color: var(--dim); }
+.alert { padding: 12px 14px; border: 1px solid var(--rule); border-left: 3px solid var(--warn); border-radius: 2px; background: var(--panel); font: 400 14px/1.45 system-ui, sans-serif; color: var(--dim); }
 .alert + .alert { margin-top: 8px; }
 .alert__t { font: 700 18px/1.15 var(--cond); letter-spacing: .02em; text-transform: uppercase; color: var(--ink); margin-bottom: 4px; }
 
 /* Buscador de estaciones */
 .fields { position: relative; display: grid; gap: 10px; }
 .field { display: grid; gap: 6px; padding: 10px 12px 11px; border: 1px solid var(--rule); border-radius: 3px; background: var(--panel); }
-.field.is-active { border-color: var(--amber); }
+.field.is-active { border-color: var(--accent); }
 .field span { font: 600 12px/1 var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
 .field input { width: 100%; padding: 0; border: 0; outline: 0; background: none; color: var(--ink); font: 700 24px/1.15 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
 .field input::placeholder { color: var(--faint); }
-.field.is-set input { color: var(--amber); }
 .swap {
   position: absolute; right: 10px; top: 50%; z-index: 1; width: 40px; height: 40px; margin-top: -20px; display: grid; place-items: center;
   border: 1px solid var(--rule); border-radius: 2px; background: var(--bg); color: var(--dim);
@@ -239,16 +245,20 @@ svg { display: block; }
 .swap:hover { color: var(--ink); border-color: var(--dim); }
 .results { list-style: none; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--rule); }
 .results button { display: block; width: 100%; padding: 12px 2px; border-bottom: 1px solid var(--rule); font: 600 20px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
-.results button:hover { color: var(--amber); }
+.results button:hover { color: var(--accent-hi); }
 .results__none { padding: 16px 2px; color: var(--dim); }
 
 /* ---------- Escritorio ---------- */
 
 @media (min-width: 760px) {
   :root { --pad: 24px; }
-  .top { padding-left: var(--pad); padding-right: var(--pad); }
   .board { gap: 18px; }
   .tr--next .tr__eta b { font-size: 72px; }
+}
+/* Escritorio: dos paneles, con aire a los lados. */
+@media (min-width: 900px) {
+  :root { --w: 1000px; }
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
