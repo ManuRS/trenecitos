@@ -1,0 +1,20 @@
+name: Limpiar Deployments
+on:
+  workflow_dispatch:
+
+permissions:
+  deployments: write
+
+jobs:
+  delete-deployments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Desactivar y borrar todos los deployments
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          IDS=$(gh api repos/${{ github.repository }}/deployments --paginate -q '.[].id')
+          for ID in $IDS; do
+            gh api -X POST repos/${{ github.repository }}/deployments/$ID/statuses -f state=inactive > /dev/null 2>&1 || true
+            gh api -X DELETE repos/${{ github.repository }}/deployments/$ID
+          done
