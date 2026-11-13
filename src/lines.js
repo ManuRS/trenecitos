@@ -1,16 +1,17 @@
 import { esc } from './format.js';
 
-// Colores aproximados de las líneas de Cercanías Madrid: [fondo, texto].
+// Colores de las líneas: los route_color del GTFS de Renfe. [fondo, texto]
+// (Renfe pone texto blanco en todas; en los claros se usa texto oscuro para que se lea.)
 const COLORS = {
-  C1: ['#5bb4e5', '#0e0d0b'],
-  C2: ['#14a05a', '#ffffff'],
-  C3: ['#a2349b', '#ffffff'],
-  C4: ['#2f55b3', '#ffffff'],
-  C5: ['#f2c12e', '#0e0d0b'],
-  C7: ['#d9342b', '#ffffff'],
-  C8: ['#7d8793', '#ffffff'],
-  C9: ['#8b5a2b', '#ffffff'],
-  C10: ['#9bb52b', '#0e0d0b'],
+  C1: ['#75b6e0', '#0e0d0b'],
+  C2: ['#00943d', '#ffffff'],
+  C3: ['#952585', '#ffffff'],
+  C4: ['#2c2a86', '#ffffff'],
+  C5: ['#fecb00', '#0e0d0b'],
+  C7: ['#e5202a', '#ffffff'],
+  C8: ['#868584', '#ffffff'],
+  C9: ['#915419', '#ffffff'],
+  C10: ['#bccf00', '#0e0d0b'],
 };
 
 export function lineColors(code) {
