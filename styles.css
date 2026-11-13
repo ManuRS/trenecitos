@@ -1,0 +1,256 @@
+/* Trenecitos · estilo "panel de andén", sobrio: tinta casi negra, ámbar para lo que cuenta atrás,
+   tipografía condensada de señalética y monoespaciada para los datos pequeños. */
+
+@font-face { font-family: 'Barlow Condensed'; font-weight: 500; font-display: swap; src: url(fonts/barlow-condensed-latin-500-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/npm/@fontsource/barlow-condensed@5/files/barlow-condensed-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(fonts/barlow-condensed-latin-600-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/npm/@fontsource/barlow-condensed@5/files/barlow-condensed-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-display: swap; src: url(fonts/barlow-condensed-latin-700-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/npm/@fontsource/barlow-condensed@5/files/barlow-condensed-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 400; font-display: swap; src: url(fonts/ibm-plex-mono-latin-400-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5/files/ibm-plex-mono-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-weight: 500; font-display: swap; src: url(fonts/ibm-plex-mono-latin-500-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5/files/ibm-plex-mono-latin-500-normal.woff2) format('woff2'); }
+
+:root {
+  --bg: #0e0d0b;
+  --panel: #161512;
+  --panel-2: #1d1c18;
+  --rule: #2b2923;
+  --ink: #ece6d8;
+  --dim: #968f82;
+  --faint: #5e594f;
+  --amber: #f2a81d;
+  --red: #f0614b;
+  --green: #7cc27f;
+  --cond: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --pad: 16px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; color-scheme: dark; }
+body {
+  margin: 0; min-height: 100dvh; background: var(--bg); color: var(--ink);
+  font: 500 17px/1.3 var(--cond); -webkit-font-smoothing: antialiased;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+body.no-scroll { overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; -webkit-tap-highlight-color: transparent; }
+h1, h2, h3, p { margin: 0; }
+s { text-decoration-thickness: 1.5px; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+svg { display: block; }
+
+/* ---------- Barra superior ---------- */
+
+.top {
+  position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
+  padding: calc(12px + env(safe-area-inset-top)) var(--pad) 12px; background: var(--bg); border-bottom: 1px solid var(--rule);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand__mark { width: 22px; height: 22px; fill: var(--amber); }
+.brand h1 { font: 700 26px/1 var(--cond); letter-spacing: .09em; text-transform: uppercase; }
+
+.btn-add {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 11px;
+  border: 1.5px solid var(--amber); border-radius: 2px; color: var(--amber);
+  font: 600 16px/1 var(--cond); letter-spacing: .08em; text-transform: uppercase;
+}
+.btn-add svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+.btn-add:hover { background: var(--amber); color: var(--bg); }
+.btn-add:disabled { border-color: var(--rule); color: var(--faint); background: none; cursor: default; }
+.btn-add--big { justify-content: center; width: 100%; padding: 14px; font-size: 18px; }
+
+.demo {
+  margin: 0; padding: 7px var(--pad); background: var(--panel-2); border-bottom: 1px solid var(--rule);
+  font: 400 11.5px/1.2 var(--mono); color: var(--dim); letter-spacing: .02em;
+}
+
+/* ---------- Tablero ---------- */
+
+.board {
+  display: grid; gap: 14px; padding: var(--pad); max-width: 1480px; margin: 0 auto; align-items: start;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 410px), 1fr));
+}
+.foot { padding: 20px var(--pad) 28px; text-align: center; font: 400 11px/1.3 var(--mono); color: var(--faint); }
+
+.panel { position: relative; background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; }
+
+.panel__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 14px 8px 12px 14px; }
+.icon-btn {
+  display: grid; place-items: center; width: 40px; height: 40px; margin-top: -6px; border-radius: 2px; color: var(--dim);
+}
+.icon-btn svg { width: 16px; height: 16px; fill: currentColor; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn svg path { fill: none; }
+.icon-btn:hover { color: var(--ink); background: var(--panel-2); }
+
+/* El trayecto como tramo de vía: origen, vía con traviesas y número de paradas, destino. */
+.route { flex: 1; min-width: 0; display: grid; }
+.route__row { display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: 12px; align-items: center; }
+.route__name { font: 700 24px/1.05 var(--cond); letter-spacing: .02em; text-transform: uppercase; overflow-wrap: anywhere; }
+.route__dot { width: 12px; height: 12px; margin: 0 auto; border: 2.5px solid var(--ink); border-radius: 50%; }
+.route__dot--end { background: var(--ink); }
+.route__row--mid { min-height: 30px; }
+.route__track {
+  align-self: stretch; width: 14px; margin: 0 auto;
+  background:
+    linear-gradient(var(--faint), var(--faint)) center / 2px 100% no-repeat,
+    repeating-linear-gradient(180deg, var(--faint) 0 2px, transparent 2px 7px) center / 12px 100% no-repeat;
+}
+.route__hops { font: 400 12px/1 var(--mono); color: var(--dim); letter-spacing: .02em; }
+
+.panel__menu { display: flex; border-top: 1px solid var(--rule); }
+.panel__menu button {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 8px;
+  font: 600 14px/1 var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--dim);
+}
+.panel__menu button + button { border-left: 1px solid var(--rule); }
+.panel__menu button:hover { background: var(--panel-2); color: var(--ink); }
+.panel__menu svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.panel__menu .danger { color: var(--red); }
+
+.panel__foot { padding: 8px 14px 10px; border-top: 1px solid var(--rule); font: 400 11px/1.2 var(--mono); color: var(--faint); min-height: 31px; }
+.note { padding: 18px 14px; border-top: 1px solid var(--rule); color: var(--dim); }
+.note--bad { color: var(--red); }
+
+/* ---------- Filas de tren ---------- */
+
+.badge {
+  display: inline-grid; place-items: center; min-width: 38px; height: 26px; padding: 0 6px; border-radius: 3px;
+  background: var(--b); color: var(--f); font: 700 16px/1 var(--cond); letter-spacing: .03em;
+}
+
+.tr {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 12px; row-gap: 6px; align-items: center; width: 100%;
+  padding: 13px 14px 12px; border-top: 1px solid var(--rule);
+}
+.tr:hover { background: var(--panel-2); }
+.tr .badge { align-self: start; margin-top: 3px; }
+.tr__dep { display: block; font: 700 30px/1 var(--cond); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+.tr__dep s { margin-right: 8px; font-size: 19px; font-weight: 500; color: var(--faint); }
+.tr__sub { display: block; margin-top: 5px; font: 400 11.5px/1.25 var(--mono); color: var(--dim); }
+.tr__eta { text-align: right; line-height: .9; color: var(--ink); }
+.tr__eta b { display: block; font: 700 40px/.9 var(--cond); font-variant-numeric: tabular-nums; }
+.tr__eta i { display: block; margin-top: 3px; font: 400 11px/1 var(--mono); font-style: normal; color: var(--dim); }
+.tr__eta.is-soon b { color: var(--amber); }
+.tr__state { grid-column: 2 / -1; display: flex; align-items: center; gap: 8px; font: 500 11.5px/1.2 var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
+.tr__state::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
+.tr__state--ok::before { background: var(--green); }
+.tr__state--ok { color: var(--ink); }
+.tr__state--late, .tr__state--off { color: var(--red); }
+.tr__state--late::before, .tr__state--off::before { background: var(--red); }
+.tr__state--sched::before { background: none; border: 1.5px solid var(--dim); }
+
+/* El primer tren manda: es el que decide si corres. */
+.tr--next { padding-top: 16px; padding-bottom: 14px; background: var(--panel-2); }
+.tr--next .tr__dep { font-size: 40px; }
+.tr--next .tr__dep s { font-size: 22px; }
+.tr--next .tr__eta b { font-size: 68px; }
+.tr--next .badge { margin-top: 6px; }
+.tr--off .tr__dep, .tr--off .tr__sub { text-decoration: line-through; text-decoration-color: var(--faint); color: var(--faint); }
+.tr--off .tr__eta b { color: var(--faint); }
+
+.empty { grid-column: 1 / -1; max-width: 420px; margin: 12vh auto 0; text-align: left; color: var(--dim); display: grid; gap: 14px; }
+.empty__title { font: 700 44px/1 var(--cond); letter-spacing: .02em; text-transform: uppercase; color: var(--ink); }
+
+/* ---------- Panel lateral ---------- */
+
+.scrim { position: fixed; inset: 0; z-index: 9; background: rgba(0, 0, 0, .62); opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+.scrim.is-open { opacity: 1; pointer-events: auto; }
+
+.sheet {
+  position: fixed; z-index: 10; top: 0; right: 0; bottom: 0; width: min(500px, 100%);
+  display: flex; flex-direction: column; background: var(--bg); border-left: 1px solid var(--rule);
+  transform: translateX(100%); visibility: hidden; transition: transform .2s ease, visibility 0s .2s;
+}
+.sheet.is-open { transform: none; visibility: visible; transition: transform .2s ease; }
+.sheet__bar {
+  display: flex; align-items: center; gap: 6px; padding: calc(8px + env(safe-area-inset-top)) 10px 8px 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.sheet__kicker { font: 600 14px/1 var(--cond); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.sheet__bar .icon-btn { margin: 0; }
+.sheet__scroll { flex: 1; overflow-y: auto; padding: 16px var(--pad) 32px; overscroll-behavior: contain; }
+.sheet__foot { padding: 12px var(--pad) calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--rule); }
+.sheet h3 { font: 600 13px/1 var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+.sheet section { margin-top: 26px; }
+.fine { margin-top: 10px; font: 400 11.5px/1.45 var(--mono); color: var(--faint); }
+
+/* Detalle del tren */
+.dhead { display: flex; align-items: center; gap: 12px; }
+.dhead__run { font: 700 22px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
+.dhead__run span { color: var(--faint); font-weight: 500; }
+.hero { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 22px; }
+.hero__time { font: 700 64px/.85 var(--cond); font-variant-numeric: tabular-nums; }
+.hero__time s { margin-right: 10px; font-size: 28px; font-weight: 500; color: var(--faint); }
+.hero__eta { text-align: right; color: var(--ink); line-height: .85; }
+.hero__eta b { font: 700 64px/.85 var(--cond); font-variant-numeric: tabular-nums; }
+.hero__eta i { font: 400 12px/1 var(--mono); font-style: normal; color: var(--dim); }
+.hero__eta.is-soon b { color: var(--amber); }
+.hero__sub { margin-top: 12px; font: 400 12px/1.4 var(--mono); color: var(--dim); }
+
+.now { padding: 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; }
+.now h3 { margin-bottom: 8px; }
+.now__text { font: 700 24px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
+.now__text--bad { color: var(--red); }
+.now__meta { margin-top: 6px; font: 400 12px/1.4 var(--mono); color: var(--dim); }
+
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.kv h3 { margin-bottom: 6px; }
+.kv__v { font: 700 28px/1 var(--cond); }
+.kv__v--ok { color: var(--green); }
+.kv__v--late { color: var(--red); }
+
+/* Recorrido: línea vertical con paradas; el tramo del usuario va en tinta, el resto apagado. */
+.stops { list-style: none; margin: 0; padding: 0; }
+.st { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; padding: 9px 0; color: var(--dim); }
+.st::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: var(--rule); }
+.st:first-child::before { top: 50%; }
+.st:last-child::before { bottom: 50%; }
+.st.seg::before { background: var(--ink); }
+.st.seg + .st.in:not(.seg)::before { background: linear-gradient(var(--ink) 50%, var(--rule) 50%); }
+.st__dot { position: relative; justify-self: center; width: 10px; height: 10px; border-radius: 50%; background: var(--bg); border: 2px solid var(--faint); }
+.st.in .st__dot { border-color: var(--ink); }
+.st.key .st__dot { width: 16px; height: 16px; background: var(--ink); border-color: var(--ink); }
+.st.passed .st__dot { background: var(--faint); }
+.st.in { color: var(--ink); }
+.st.key .st__name { font-weight: 700; font-size: 20px; }
+.st__name { font: 500 18px/1.15 var(--cond); letter-spacing: .01em; }
+.st__time { font: 400 13px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.st__time s { margin-right: 6px; color: var(--faint); }
+.st.passed .st__name, .st.passed .st__time { color: var(--faint); }
+.tag { margin-left: 8px; padding: 2px 5px; border: 1px solid var(--dim); border-radius: 2px; font: 500 10px/1 var(--mono); font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); vertical-align: 3px; }
+.st.here .st__dot { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 0 4px rgba(242, 168, 29, .22); }
+.st.here .st__name { color: var(--amber); }
+
+.alert { padding: 12px 14px; border: 1px solid var(--rule); border-left: 3px solid var(--amber); border-radius: 2px; background: var(--panel); font: 400 14px/1.45 system-ui, sans-serif; color: var(--dim); }
+.alert + .alert { margin-top: 8px; }
+.alert__t { font: 700 18px/1.15 var(--cond); letter-spacing: .02em; text-transform: uppercase; color: var(--ink); margin-bottom: 4px; }
+
+/* Buscador de estaciones */
+.fields { position: relative; display: grid; gap: 10px; }
+.field { display: grid; gap: 6px; padding: 10px 12px 11px; border: 1px solid var(--rule); border-radius: 3px; background: var(--panel); }
+.field.is-active { border-color: var(--amber); }
+.field span { font: 600 12px/1 var(--cond); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.field input { width: 100%; padding: 0; border: 0; outline: 0; background: none; color: var(--ink); font: 700 24px/1.15 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
+.field input::placeholder { color: var(--faint); }
+.field.is-set input { color: var(--amber); }
+.swap {
+  position: absolute; right: 10px; top: 50%; z-index: 1; width: 40px; height: 40px; margin-top: -20px; display: grid; place-items: center;
+  border: 1px solid var(--rule); border-radius: 2px; background: var(--bg); color: var(--dim);
+}
+.swap svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.swap:hover { color: var(--ink); border-color: var(--dim); }
+.results { list-style: none; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--rule); }
+.results button { display: block; width: 100%; padding: 12px 2px; border-bottom: 1px solid var(--rule); font: 600 20px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
+.results button:hover { color: var(--amber); }
+.results__none { padding: 16px 2px; color: var(--dim); }
+
+/* ---------- Escritorio ---------- */
+
+@media (min-width: 760px) {
+  :root { --pad: 24px; }
+  .top { padding-left: var(--pad); padding-right: var(--pad); }
+  .board { gap: 18px; }
+  .tr--next .tr__eta b { font-size: 72px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .sheet.is-open, .scrim { transition: none; }
+}
