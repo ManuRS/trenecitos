@@ -1,4 +1,7 @@
-const KEY = 'trenecitos:v1:trips';
+let KEY = 'trenecitos:v1:trips';
+
+/** La demostración guarda aparte, para no pisar los trayectos reales. */
+export const useDemoStore = () => { KEY = 'trenecitos:demo:trips'; };
 
 /** Devuelve la lista guardada, o null si nunca se ha guardado nada. */
 export function load() {

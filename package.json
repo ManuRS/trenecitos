@@ -10,6 +10,7 @@
   "devDependencies": {
     "@fontsource/barlow-condensed": "^5.2.0",
     "@fontsource/ibm-plex-mono": "^5.2.0",
-    "@resvg/resvg-js": "^2.6.2"
+    "@resvg/resvg-js": "^2.6.2",
+    "fflate": "^0.8.3"
   }
 }

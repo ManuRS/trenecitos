@@ -1,8 +1,11 @@
-import * as src from './mock.js';          // <- se sustituirá por la fuente real de Renfe
 import * as store from './store.js';
 import { etaParts } from './format.js';
 import { panelHTML, emptyHTML, detailHTML } from './ui.js';
 import { pickerHTML, initPicker } from './picker.js';
+
+// Datos reales de Renfe; con ?demo se usa la fuente simulada (para ver la interfaz sin red).
+const src = await import(new URLSearchParams(location.search).has('demo') ? './mock.js' : './renfe.js');
+if (src.DEMO) store.useDemoStore();
 
 const $ = id => document.getElementById(id);
 const board = $('board'), sheet = $('sheet'), scrim = $('scrim');
@@ -14,15 +17,21 @@ let trips = [];
 let stationList = [];
 let open = null;                      // { kind: 'train', tripId, key } | { kind: 'picker' }
 let lastFocus = null;
+let dropPicker = null;                // suelta los eventos del buscador al cerrarlo
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 /* ---------- Arranque ---------- */
 
 async function init() {
-  stationList = await src.stations();
+  try { stationList = await src.stations(); }
+  catch (e) { console.error(e); board.innerHTML = '<section class="empty"><p class="empty__title">Sin horarios</p><p>No se han podido cargar los horarios de Renfe. Comprueba la conexión y recarga la página.</p></section>'; return; }
   const saved = store.load();
-  if (saved) trips = saved;
+  if (saved) {                         // solo trayectos cuyas estaciones existen en los horarios actuales
+    const byId = new Map(stationList.map(s => [s.id, s]));
+    trips = saved.filter(t => byId.has(t.from.id) && byId.has(t.to.id)).map(t => ({ ...t, from: byId.get(t.from.id), to: byId.get(t.to.id) }));
+    if (trips.length !== saved.length) store.save(trips);
+  }
   else if (src.DEMO) {                 // solo en modo demostración: tres trayectos de ejemplo
     const by = id => stationList.find(s => s.id === id);
     trips = [['17004', '18002'], ['18002', '17004'], ['d08', 'd10']].map(([a, b]) => ({ id: uid(), from: by(a), to: by(b) }));
@@ -72,6 +81,7 @@ function tick() {
 /* ---------- Panel lateral (detalle y buscador) ---------- */
 
 function showSheet(html) {
+  if (dropPicker) { dropPicker(); dropPicker = null; }
   lastFocus = document.activeElement;
   sheet.innerHTML = html;
   sheet.classList.add('is-open'); scrim.classList.add('is-open');
@@ -81,6 +91,7 @@ function showSheet(html) {
 
 function closeSheet() {
   open = null;
+  if (dropPicker) { dropPicker(); dropPicker = null; }
   sheet.classList.remove('is-open'); scrim.classList.remove('is-open');
   sheet.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('no-scroll');
@@ -112,7 +123,7 @@ async function refreshDetail() {
 function openPicker() {
   open = { kind: 'picker' };
   showSheet(pickerHTML());
-  initPicker(sheet, stationList, async ({ from, to }) => {
+  dropPicker = initPicker(sheet, stationList, async ({ from, to }) => {
     const t = { id: uid(), from, to };
     trips.push(t); store.save(trips);
     closeSheet(); renderBoard();

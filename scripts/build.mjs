@@ -1,6 +1,8 @@
-// Construye dist/: copia la app, las tipografías (desde node_modules) y genera los iconos PNG.
+// Construye dist/: copia la app, las tipografías (desde node_modules), los iconos PNG y los horarios de Madrid
+// (descarga el GTFS de Renfe y lo convierte; si GTFS_ZIP apunta a un zip local, usa ese).
 import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
 import { Resvg } from '@resvg/resvg-js';
+import { convert, download, madridToday, GTFS_URL } from './gtfs.mjs';
 
 const dist = 'dist';
 await rm(dist, { recursive: true, force: true });
@@ -33,4 +35,25 @@ for (const size of [180, 192, 512]) {
   await writeFile(`${dist}/icons/icon-${size}.png`, png);
 }
 await cp(`${dist}/icons/icon-180.png`, `${dist}/icons/apple-touch-icon.png`);
+// ---------- Horarios ----------
+// Si la descarga o la conversión fallan, el build falla y Cloudflare deja el despliegue anterior en producción.
+let zip;
+if (process.env.GTFS_ZIP) zip = { buf: new Uint8Array(await readFile(process.env.GTFS_ZIP)), from: process.env.GTFS_ZIP };
+else zip = await download([
+  process.env.GTFS_URL || GTFS_URL,
+  // Plan B: la función proxy ya desplegada (Cloudflare sí valida bien el certificado de Renfe).
+  process.env.GTFS_FALLBACK_URL || 'https://trenecitos.pages.dev/api/gtfs',
+]);
+console.log(`GTFS: ${(zip.buf.length / 1048576).toFixed(1)} MB desde ${zip.from}`);
+const t0 = Date.now();
+const { index, days, stats } = convert(zip.buf);
+if (!days.size) throw new Error('El GTFS no trae ningún día con trenes de Madrid');
+const today = madridToday();
+if (!days.has(today)) console.warn(`AVISO: el GTFS no incluye hoy (${today}); días: ${[...days.keys()].join(', ')}`);
+await mkdir(`${dist}/data/d`, { recursive: true });
+await writeFile(`${dist}/data/index.json`, JSON.stringify(index));
+for (const [d, v] of days) await writeFile(`${dist}/data/d/${d}.json`, JSON.stringify(v));
+const size = (await readFile(`${dist}/data/index.json`)).length;
+console.log(`Horarios de Madrid en ${((Date.now() - t0) / 1000).toFixed(1)} s:`, stats, `· index.json ${(size / 1024).toFixed(0)} KB`);
+
 console.log('dist/ listo');

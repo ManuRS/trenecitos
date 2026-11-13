@@ -14,8 +14,12 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 function stateLine(t) {
   if (t.status === 'cancelled') return { cls: 'off', text: 'Cancelado' };
   const d = delayInfo(t.delay);
-  if (t.status === 'scheduled') return { cls: 'sched', text: d.cls === 'late' ? `${d.text} · según horario` : 'Según horario · sin posición' };
-  return { cls: d.cls, text: `${d.text} · circulando` };
+  const via = t.platform ? `vía ${t.platform}` : '';
+  if (t.status === 'scheduled') {
+    return { cls: d.cls === 'late' ? 'late' : 'sched', text: [d.cls === 'late' ? d.text : '', d.cls === 'late' ? 'según horario' : 'según horario · sin posición'].filter(Boolean).join(' · ') };
+  }
+  const phase = t.phase === 'at' ? 'en la estación' : t.phase === 'arriving' ? 'llegando' : 'circulando';
+  return { cls: d.cls, text: [d.text, phase, via].filter(Boolean).join(' · ') };
 }
 
 function trainRow(t, i, now) {
@@ -41,7 +45,8 @@ export function panelHTML(trip, d, ui, now) {
   const confirm = ui.confirm === trip.id;
   let body;
   if (!d) body = '<p class="note">Cargando trenes…</p>';
-  else if (d.error) body = `<p class="note note--bad">No se han podido cargar los datos de Renfe.</p>`;
+  else if (d.error) body = `<p class="note note--bad">${d.reason === 'stale' ? 'Los horarios guardados no incluyen hoy. Recarga la página en un rato.' : d.reason === 'station' ? 'Una de las estaciones ya no existe en los horarios de Renfe. Quita el trayecto y vuelve a crearlo.' : 'No se han podido cargar los horarios de Renfe.'}</p>`;
+  else if (d.noDirect) body = '<p class="note">No hay tren directo entre estas dos estaciones. Hará falta un transbordo.</p>';
   else if (!d.trains.length) body = '<p class="note">No hay trenes en las próximas horas.</p>';
   else body = d.trains.map((t, i) => trainRow(t, i, now)).join('');
 
@@ -49,7 +54,7 @@ export function panelHTML(trip, d, ui, now) {
     <header class="panel__head">
       <div class="route">
         <div class="route__row"><i class="route__dot"></i><span class="route__name">${esc(trip.from.name)}</span></div>
-        <div class="route__row route__row--mid"><i class="route__track"></i><span class="route__hops">${hops == null ? '…' : plural(hops, 'parada', 'paradas')}</span></div>
+        <div class="route__row route__row--mid"><i class="route__track"></i><span class="route__hops">${hops != null ? plural(hops, 'parada', 'paradas') : d && d.noDirect ? 'sin tren directo' : '…'}</span></div>
         <div class="route__row"><i class="route__dot route__dot--end"></i><span class="route__name">${esc(trip.to.name)}</span></div>
       </div>
       <button type="button" class="icon-btn" data-act="menu" aria-label="Opciones del trayecto" aria-expanded="${menu}">${ICON.dots}</button>
@@ -59,7 +64,7 @@ export function panelHTML(trip, d, ui, now) {
       <button type="button" class="danger" data-act="remove">${confirm ? 'Pulsa otra vez para quitar' : 'Quitar'}</button>
     </div>` : ''}
     <div class="trains">${body}</div>
-    <footer class="panel__foot"><span data-upd="${d && d.updatedAt ? d.updatedAt : ''}">${d && d.updatedAt ? 'Renfe · actualizado ' + hhmmss(d.updatedAt) : ''}</span></footer>
+    <footer class="panel__foot"><span data-upd="${d && d.updatedAt ? d.updatedAt : ''}">${!d || d.error ? '' : d.updatedAt ? 'Renfe · actualizado ' + hhmmss(d.updatedAt) : d.rt === false ? 'Sin tiempo real de Renfe · horario' : ''}</span></footer>
   </article>`;
 }
 
@@ -83,7 +88,7 @@ export function detailHTML(d, now) {
   const stops = d.stops.map((s, n) => {
     const inSeg = n >= d.iFrom && n <= d.iTo;
     const seg = n >= d.iFrom && n < d.iTo;
-    const passed = s.est < now && t.status !== 'cancelled';
+    const passed = (s.passed ?? s.est < now) && t.status !== 'cancelled';
     const here = n === d.here.hereIdx && d.here.kind !== 'sched';
     const tag = n === d.iFrom ? '<em class="tag">Subes</em>' : n === d.iTo ? '<em class="tag">Bajas</em>' : '';
     const sc = hhmm(s.sched) !== hhmm(s.est);
@@ -100,7 +105,7 @@ export function detailHTML(d, now) {
        <p class="now__meta">${[
           d.here.platform ? `vía ${d.here.platform}` : '',
           d.here.state || '',
-          d.positionAt ? `posición ${ago(d.positionAt, now)}` : 'sin posición todavía: horas según horario',
+          d.positionAt ? `posición ${ago(d.positionAt, now)}` : 'sin posición: horas según horario',
         ].filter(Boolean).join(' · ')}</p>`;
 
   return `<div class="sheet__bar">
@@ -137,7 +142,7 @@ export function detailHTML(d, now) {
 
       ${d.alerts.length ? `<section>
         <h3>Avisos de Renfe</h3>
-        ${d.alerts.map(a => `<div class="alert"><p class="alert__t">${esc(a.title)}</p><p>${esc(a.text)}</p></div>`).join('')}
+        ${d.alerts.map(a => `<div class="alert">${a.title ? `<p class="alert__t">${esc(a.title)}</p>` : ''}<p>${esc(a.text)}</p></div>`).join('')}
       </section>` : ''}
     </div>`;
 }

@@ -1,7 +1,9 @@
-const pad = n => String(n).padStart(2, '0');
+const hm = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const hms = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
 
-export const hhmm = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-export const hhmmss = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+// Siempre hora de Madrid, esté el móvil donde esté.
+export const hhmm = ms => hm.format(ms);
+export const hhmmss = ms => hms.format(ms);
 
 /** Minúsculas y sin tildes, para buscar estaciones. */
 export const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

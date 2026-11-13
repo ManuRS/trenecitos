@@ -18,7 +18,7 @@ export function pickerHTML() {
     <div class="sheet__foot"><button type="button" class="btn-add btn-add--big" data-act="save" disabled>Guardar trayecto</button></div>`;
 }
 
-/** Conecta la lógica del buscador. */
+/** Conecta la lógica del buscador. Devuelve una función para destruirlo. */
 export function initPicker(root, stations, onSave) {
   const sel = { from: null, to: null };
   let active = 'from';
@@ -51,6 +51,7 @@ export function initPicker(root, stations, onSave) {
     });
   }
 
+  const ac = new AbortController();         // el panel lateral se reutiliza: hay que soltar el manejador al cerrar
   root.addEventListener('click', ev => {
     const pick = ev.target.closest('.results button[data-id]');
     if (pick) {
@@ -67,8 +68,9 @@ export function initPicker(root, stations, onSave) {
       return;
     }
     if (ev.target.closest('[data-act=save]') && sel.from && sel.to) onSave({ from: sel.from, to: sel.to });
-  });
+  }, { signal: ac.signal });
 
   render();
   inputs.from.focus();
+  return () => ac.abort();
 }

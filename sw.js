@@ -18,6 +18,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;      // tiempo real: siempre a la red
   // Devuelve lo cacheado al instante y lo refresca en segundo plano.
   e.respondWith(
     caches.open(CACHE).then(async cache => {
