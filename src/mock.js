@@ -15,10 +15,10 @@ const ROUTE = [
   ['17004', 'Tres Cantos', 6],
   ['d03', 'Cantoblanco Universidad', 12],
   ['d04', 'Fuente de la Mora', 17],
-  ['d05', 'Madrid-Chamartín', 24],
-  ['18002', 'Madrid-Nuevos Ministerios', 30],
-  ['d07', 'Madrid-Recoletos', 33],
-  ['d08', 'Madrid-Atocha Cercanías', 37],
+  ['d05', 'Chamartín', 24],
+  ['18002', 'Nuevos Ministerios', 30],
+  ['d07', 'Recoletos', 33],
+  ['d08', 'Atocha', 37],
   ['d09', 'Villaverde Alto', 48],
   ['d10', 'Getafe Centro', 56],
   ['d11', 'Parla', 66],
@@ -30,7 +30,7 @@ const idx = id => ROUTE.findIndex(r => r[0] === id);
 
 export const stations = async () => ROUTE.map(([id, name]) => ({ id, name }));
 
-/** Paradas de un viaje en el sentido dado, con su offset en minutos desde el origen del viaje. */
+/** Parada i de un viaje en el sentido dado, con su offset en minutos desde el origen del viaje. */
 function stopsOf(south) {
   const list = south ? ROUTE : [...ROUTE].reverse();
   return list.map(([id, name, off]) => ({ id, name, off: south ? off : END - off }));

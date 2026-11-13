@@ -16,6 +16,8 @@ export function etaParts(targetMs, nowMs) {
   if (s <= 0) return { big: 'ya', unit: '', soon: true };
   if (s < 60) return { big: '<1', unit: 'min', soon: true };
   const m = Math.floor(s / 60);
+  if (m >= 24 * 60) return { big: '>24', unit: 'h', soon: false };
+  if (m >= 100) return { big: `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`, unit: 'h', soon: false };
   return { big: String(m), unit: 'min', soon: m <= 3 };
 }
 
@@ -30,4 +32,14 @@ export function delayInfo(sec) {
   if (sec <= -60) return { text: `${Math.round(-sec / 60)} min antes`, cls: 'early' };
   if (sec < 60) return { text: 'Puntual', cls: 'ok' };
   return { text: `+${Math.round(sec / 60)} min`, cls: 'late' };
+}
+
+const dkey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid' });
+const wday = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', weekday: 'long' });
+/** '' si es hoy; 'mañana' o 'el lunes' si la salida es otro día (en hora de Madrid). */
+export function dayTag(ms, now) {
+  const a = dkey.format(now), b = dkey.format(ms);
+  if (a === b) return '';
+  const days = Math.round((Date.parse(b) - Date.parse(a)) / 86400e3);
+  return days === 1 ? 'mañana' : `el ${wday.format(ms)}`;
 }

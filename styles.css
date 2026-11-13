@@ -8,13 +8,13 @@
 @font-face { font-family: 'IBM Plex Mono'; font-weight: 500; font-display: swap; src: url(fonts/ibm-plex-mono-latin-500-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5/files/ibm-plex-mono-latin-500-normal.woff2) format('woff2'); }
 
 :root {
-  --bg: #1c2026;
-  --panel: #262b32;
-  --panel-2: #2f353d;
-  --rule: #414852;
+  --bg: #242a32;
+  --panel: #2e353e;
+  --panel-2: #38404a;
+  --rule: #4b535e;
   --ink: #eef1f4;
-  --dim: #a3abb5;
-  --faint: #6f7782;
+  --dim: #aeb6c0;
+  --faint: #7b838e;
   --accent: #e5202a;      /* rojo (color de la línea C7 en el GTFS de Renfe) */
   --accent-hi: #ff4d52;   /* el mismo rojo, más claro, para texto sobre fondo oscuro */
   --warn: #f2a81d;        /* retrasos y avisos */
@@ -49,7 +49,7 @@ svg { display: block; }
   background: var(--bg); border-bottom: 1px solid var(--rule);
 }
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand__mark { width: 22px; height: 22px; fill: var(--accent); }
+.brand__mark { width: 28px; height: 24px; fill: var(--accent); }
 .brand h1 { font: 700 26px/1 var(--cond); letter-spacing: .09em; text-transform: uppercase; }
 
 .btn-add {
@@ -130,6 +130,7 @@ svg { display: block; }
 .tr__dep { display: block; font: 700 30px/1 var(--cond); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
 .tr__dep s { margin-right: 8px; font-size: 19px; font-weight: 500; color: var(--faint); }
 .tr__sub { display: block; margin-top: 5px; font: 400 11.5px/1.25 var(--mono); color: var(--dim); }
+.tr__day { font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--ink); }
 .tr__eta { text-align: right; line-height: .9; color: var(--ink); }
 .tr__eta b { display: block; font: 700 40px/.9 var(--cond); font-variant-numeric: tabular-nums; }
 .tr__eta i { display: block; margin-top: 3px; font: 400 11px/1 var(--mono); font-style: normal; color: var(--dim); }

@@ -8,6 +8,17 @@ import { unzipSync } from 'fflate';
 export const GTFS_URL = 'https://ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip';
 export const MADRID_ROUTE = /^10T/;            // route_id de Madrid: 10T0001C1, 10T0015C4b…
 
+/* ---------- Nombres de estación ---------- */
+
+/** Nombre de uso diario: Renfe pone "Madrid-Atocha Cercanías"; quien la usa dice "Atocha". */
+export function displayName(name) {
+  return name
+    .replace(/^Madrid-/, '')
+    .replace(/\s+Cercanías$/i, '')
+    .replace(/^Chamartín-Clara Campoamor$/, 'Chamartín')
+    .replace(/\s+P\.V\.$/, '');
+}
+
 /* ---------- Descarga ---------- */
 
 export async function download(urls) {
@@ -149,7 +160,9 @@ export function convert(zipBuf, { today = madridToday() } = {}) {
     const t = trips.get(tid);
     const start = list[0][3];
     const sIdx = list.map(x => {
-      if (!stopIdx.has(x[1])) { stopIdx.set(x[1], stopRows.length); stopRows.push([x[1], stopNames.get(x[1]) || x[1]]); }
+      if (!stopIdx.has(x[1])) { stopIdx.set(x[1], stopRows.length); const full = stopNames.get(x[1]) || x[1], shown = displayName(full);
+      stopRows.push(shown === full ? [x[1], shown] : [x[1], shown, full]);    // el nombre original solo sirve para buscar
+    }
       return stopIdx.get(x[1]);
     });
     const arr = list.map(x => x[2] - start), dep = list.map(x => x[3] - start);

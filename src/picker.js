@@ -31,7 +31,7 @@ export function initPicker(root, stations, onSave) {
     const q = norm(inputs[active].value.trim());
     const other = sel[active === 'from' ? 'to' : 'from'];
     const items = stations
-      .filter(s => (!other || s.id !== other.id) && (!q || norm(s.name).includes(q)))
+      .filter(s => (!other || s.id !== other.id) && (!q || norm(s.name).includes(q) || (s.alt && norm(s.alt).includes(q))))
       .sort((a, b) => (norm(b.name).startsWith(q) - norm(a.name).startsWith(q)) || a.name.localeCompare(b.name, 'es'));
     list.innerHTML = (sel.from && sel.to) ? '' : items.length
       ? items.map(s => `<li><button type="button" role="option" data-id="${esc(s.id)}">${esc(s.name)}</button></li>`).join('')

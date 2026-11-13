@@ -1,4 +1,4 @@
-import { esc, hhmm, hhmmss, etaParts, ago, delayInfo } from './format.js';
+import { esc, hhmm, hhmmss, etaParts, ago, delayInfo, dayTag } from './format.js';
 import { badge } from './lines.js';
 
 export const ICON = {
@@ -30,7 +30,7 @@ function trainRow(t, i, now) {
     ${badge(t.line)}
     <span class="tr__main">
       <span class="tr__dep">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${hhmm(t.estDep)}</span>
-      <span class="tr__sub">llega ${hhmm(t.estArr)} · hacia ${esc(t.headsign)}</span>
+      <span class="tr__sub">${dayTag(t.estDep, now) ? `<b class="tr__day">${dayTag(t.estDep, now)}</b> · ` : ''}llega ${hhmm(t.estArr)} · hacia ${esc(t.headsign)}</span>
     </span>
     ${t.status === 'cancelled'
       ? '<span class="tr__eta"><b>—</b></span>'

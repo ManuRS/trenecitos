@@ -48,7 +48,7 @@ export function loadIndex() {
       .then(r => { if (!r.ok) throw new Error('index.json: HTTP ' + r.status); return r.json(); })
       .then(raw => ({
         built: raw.built, dates: new Set(raw.dates),
-        stops: raw.stops.map(([id, name]) => ({ id, name })),
+        stops: raw.stops.map(([id, name, alt]) => alt ? { id, name, alt } : { id, name }),
         stopIdx: new Map(raw.stops.map((s, i) => [s[0], i])),
         routes: raw.routes.map(([id, short, color, text, long]) => ({ id, short, color, text, long })),
         patterns: raw.patterns.map(([route, stops, arr, dep, min]) => ({ route, stops, arr, dep, k: min ? 60 : 1 })),
