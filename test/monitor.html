@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trenecitos · monitor de datos Renfe</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 15px/1.4 system-ui, sans-serif; background: #111; color: #ddd; margin: 0; padding: 16px; max-width: 1100px; margin-inline: auto; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { margin: 4px 0 12px; color: #999; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; align-items: center; }
+  button, select, input[type=number] { background: #2a2a2a; color: #eee; border: 1px solid #555; padding: 9px 13px; border-radius: 4px; font: inherit; cursor: pointer; }
+  input[type=number] { width: 70px; cursor: text; padding: 9px 6px; }
+  button:hover { background: #383838; }
+  button.main { background: #d8a21f; color: #111; border-color: #d8a21f; font-weight: 600; }
+  button.on { background: #2e7d32; border-color: #2e7d32; color: #fff; font-weight: 600; }
+  pre { background: #000; border: 1px solid #333; padding: 10px; overflow: auto; max-height: 62vh; white-space: pre-wrap; word-break: break-word; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; }
+  .live { font: 12.5px/1.5 ui-monospace, Menlo, Consolas, monospace; background: #181818; border: 1px solid #333; padding: 8px 10px; border-radius: 4px; white-space: pre-wrap; }
+  .dim { color: #888; } .ok { color: #7fd27f; } .bad { color: #ff7b72; }
+</style>
+</head>
+<body>
+<h1>Monitor de datos Renfe en vivo</h1>
+<p>Pulsa <b>Iniciar</b> y déjala abierta (cuantas más horas, mejor; sirve cualquier momento del día, incluido el servicio de noche y la hora punta). Consulta los feeds de tiempo real a través del proxy de esta web, cruza todo con el horario estático y va apuntando eventos y estadísticas. Cuando quieras: <b>Copiar resumen</b> y pégamelo. Si cierras o recargas la pestaña, se conserva lo acumulado.</p>
+
+<div class="row">
+  <button class="main" id="go">Iniciar</button>
+  <label>cada <select id="ivl"><option value="20">20 s</option><option value="30" selected>30 s</option><option value="60">60 s</option></select></label>
+  <label><input type="checkbox" id="wake" checked> mantener pantalla encendida</label>
+  <span class="dim" id="status"></span>
+</div>
+<div class="live" id="live">Parada.</div>
+<div class="row">
+  <button id="b-sum">Ver resumen</button>
+  <button id="b-ev">Ver eventos</button>
+  <button class="main" id="b-copy-sum">Copiar resumen</button>
+  <button id="b-copy-ev">Copiar últimos <input type="number" id="nev" value="300" min="10" max="5000"> eventos</button>
+  <button id="b-dl">Descargar todo (.txt)</button>
+  <button id="b-clear">Borrar todo</button>
+</div>
+<pre id="log"></pre>
+
+<script>
+'use strict';
+const TZ = 'Europe/Madrid', KEY = 'trenecitos.monitor.v1';
+const $ = id => document.getElementById(id);
+const PLAT = /PLATF\.?\s*\((\d+)\)/i;
+
+/* ---------- Tiempo en hora de Madrid ---------- */
+const wall = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+const wallParts = ms => { const p = {}; for (const x of wall.formatToParts(ms)) p[x.type] = +x.value; return p; };
+const dateKey = ms => { const p = wallParts(ms); return String(p.year * 10000 + p.month * 100 + p.day); };
+function dayStart(key) {
+  const y = +key.slice(0, 4), m = +key.slice(4, 6), d = +key.slice(6, 8);
+  let g = Date.UTC(y, m - 1, d);
+  for (let n = 0; n < 2; n++) { const p = wallParts(g); g -= Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - Date.UTC(y, m - 1, d); }
+  return g;
+}
+const two = n => String(n).padStart(2, '0');
+const hms = ms => { const p = wallParts(ms); return `${two(p.hour)}:${two(p.minute)}:${two(p.second)}`; };
+const hm = ms => hms(ms).slice(0, 5);
+const dt = ms => { const p = wallParts(ms); return `${p.year}-${two(p.month)}-${two(p.day)} ${hms(ms)}`; };
+const hourOf = ms => wallParts(ms).hour;
+const dur = ms => { const m = Math.round(ms / 60000); return `${Math.floor(m / 60)} h ${two(m % 60)} min`; };
+
+/* ---------- Estadística ---------- */
+const q = (a, p) => { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y), i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); };
+const r1 = x => (Number.isFinite(x) ? (Math.round(x * 10) / 10) : '–');
+const mean = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN;
+const stat = (a, f = r1) => a.length ? `n=${a.length} min=${f(Math.min(...a))} p10=${f(q(a, .1))} p50=${f(q(a, .5))} p90=${f(q(a, .9))} p99=${f(q(a, .99))} max=${f(Math.max(...a))}` : 'n=0';
+const pct = (a, b) => b ? `${Math.round(100 * a / b)}%` : '–';
+const mins = s => r1(s / 60);
+function keep(arr, v, cap = 6000) { arr.push(v); if (arr.length > cap) { const k = arr.filter((_, i) => i % 2 === 0); arr.length = 0; arr.push(...k); } }
+const inc = (o, k, n = 1) => { o[k] = (o[k] || 0) + n; };
+const trunc = (s, n) => s.length > n ? s.slice(0, n) + '…' : s;
+
+/* ---------- Estado acumulado (serializable) ---------- */
+const fresh = () => ({
+  t0: Date.now(), polls: 0, gaps: 0, gapSec: 0, errors: 0, lastPoll: 0, running: false,
+  net: {}, hdrInt: {}, hdrAge: {}, hdrLast: {}, vAge: [],
+  cov: { polls: 0, run: 0, tu: 0, vp: 0, both: 0, byHour: {} }, noRt: [],
+  rtTuAll: 0, rtVpAll: 0, unmatched: 0, unmatchedSample: [], vpUnmatched: 0, ambig: 0, noTid: 0,
+  lines: {}, jumps: [], lead: [],
+  stuN: {}, stuVary: 0, stuMismatch: 0, stuSample: [], stuVsVeh: { same: 0, diff: 0 },
+  arrObs: [], depObs: [], err: { h0: [], h5: [], h10: [], h20: [] },
+  platLead: [], platChange: 0, stoppedWithPlat: 0, stoppedNoPlat: 0, vehStatus: {},
+  frozen: 0, vanish: [], cancelled: [], alerts: [], alertAdd: 0, alertDel: 0,
+  enums: {}, samples: { tu: [], vp: [], cancel: [] }, evCount: {}, staticInfo: '',
+});
+let S = fresh(), events = [];
+let ST = null;                       // horario estático
+const trips = new Map();             // viajes seguidos en esta sesión de página
+let busy = false, timer = null, wl = null, pollN = 0, interval = 30e3, view = 'events', prevAlerts = new Map();
+const ALERT_EVERY = 5 * 60e3; let lastAlerts = 0;
+
+function ev(code, text, now = Date.now()) {
+  events.push(`${hms(now)} ${code} ${text}`);
+  inc(S.evCount, code);
+  if (events.length > 80000) events.splice(0, 10000);
+}
+function note(kind, val) {
+  const set = S.enums[kind] || (S.enums[kind] = {});
+  if (!(val in set)) { set[val] = 0; if (S.polls > 0) ev('ENUM', `${kind}=${trunc(val, 80)}`); }
+  set[val]++;
+}
+
+/* ---------- Horario estático ---------- */
+async function loadStatic(now) {
+  const raw = await (await fetch('../data/index.json', { cache: 'no-store' })).json();
+  const ids = raw.stops.map(s => String(s[0])), names = raw.stops.map(s => s[1]);
+  const pats = raw.patterns.map(([r, stops, arr, dep, min]) => ({ short: raw.routes[r][1], stops: stops.map(i => ids[i]), arr, dep, k: min ? 60 : 1 }));
+  const today = dateKey(now), base = dayStart(today);
+  const keys = [...new Set([dateKey(base - 12 * 3600e3), today, dateKey(base + 36 * 3600e3)])].filter(k => raw.dates.includes(k));
+  const byId = new Map(), all = [];
+  for (const k of keys) {
+    const d = await (await fetch(`../data/d/${k}.json`, { cache: 'no-store' })).json(), b = dayStart(k);
+    for (const [tid, p, start] of d.t) {
+      const pat = pats[p];
+      const c = { tid, pat, base: b, start, s: b + start * 1000, e: b + (start + pat.arr[pat.arr.length - 1] * pat.k) * 1000 };
+      (byId.get(tid) || byId.set(tid, []).get(tid)).push(c); all.push(c);
+    }
+  }
+  ST = { key: today, byId, all, names, ids };
+  S.staticInfo = `construido ${raw.built || '?'} · días ${keys.join(',')} · ${all.length} viajes · ${pats.length} patrones · ${ids.length} paradas`;
+}
+const schedAt = (c, i, w) => c.base + (c.start + (w === 'dep' ? c.pat.dep[i] : c.pat.arr[i]) * c.pat.k) * 1000;
+function resolve(tid, now) {
+  const l = ST.byId.get(tid); if (!l) return null; if (l.length === 1) return l[0];
+  S.ambig++; let best = null, bd = Infinity;
+  for (const c of l) { const d = now < c.s ? c.s - now : now > c.e ? now - c.e : 0; if (d < bd) { bd = d; best = c; } }
+  return best;
+}
+const stopName = (c, i) => i >= 0 && i < c.pat.stops.length ? ST.names[ST.ids.indexOf(c.pat.stops[i])] || c.pat.stops[i] : '?';
+
+/* ---------- Red ---------- */
+async function get(name) {
+  const t0 = performance.now(), n = S.net[name] || (S.net[name] = { ok: 0, err: 0, ms: [], kb: [], cache: {}, status: {} });
+  try {
+    const r = await fetch(`../api/rt/${name}`, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+    const txt = await r.text();
+    inc(n.status, r.status); inc(n.cache, r.headers.get('x-upstream-cache') || '(vacío)');
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + trunc(txt, 120));
+    const json = JSON.parse(txt);
+    n.ok++; keep(n.ms, Math.round(performance.now() - t0)); keep(n.kb, Math.round(txt.length / 1024));
+    return json;
+  } catch (e) { n.err++; throw e; }
+}
+function header(name, json, now) {
+  const h = json.header || {}; for (const k of Object.keys(h)) note('headerKeys', k);
+  const ts = +h.timestamp || 0; if (!ts) return;
+  const last = S.hdrLast[name];
+  if (last !== ts) {
+    if (last) keep(S.hdrInt[name] || (S.hdrInt[name] = []), ts - last);
+    keep(S.hdrAge[name] || (S.hdrAge[name] = []), Math.round(now / 1000 - ts));
+    S.hdrLast[name] = ts;
+  }
+}
+
+/* ---------- Seguimiento de viajes ---------- */
+function getTrip(tid, c, now, first) {
+  let T = trips.get(tid);
+  if (!T) {
+    T = { tid, c, line: c.pat.short, first: now, early: first, delays: [], delay: null, firstDelay: null, maxDelay: 0, changes: 0, cancelled: false,
+      veh: null, vts: 0, vtsSince: now, frozen: false, obsArr: new Set(), obsDep: new Set(), plat: new Map(), lastSeen: now, vi: -1, tu: false, vp: false, stuStop: null };
+    trips.set(tid, T);
+    if (!first) { const lead = (c.s - now) / 1000; keep(S.lead, lead); ev('NEW', `${T.line} ${tid} sale ${hm(c.s)} desde ${stopName(c, 0)} (${lead >= 0 ? 'antelación ' + Math.round(lead) + ' s' : 'ya salido hace ' + Math.round(-lead) + ' s'})`, now); }
+  }
+  return T;
+}
+function delayAt(T, t) { let r = null; for (const [ts, d] of T.delays) { if (ts <= t) r = d; else break; } return r; }
+const fd = s => s == null ? '∅' : (s >= 0 ? '+' : '') + Math.round(s / 60 * 10) / 10 + 'm';
+
+function processTU(json, now, first, seen) {
+  const ents = json.entity || []; S.rtTuAll = ents.length;
+  for (const e of ents) {
+    note('entityKeys(tu)', Object.keys(e).sort().join(','));
+    const idp = String(e.id || '').replace(/[0-9A-Za-z]+$/, '').slice(0, 20); note('entityIdPrefix(tu)', idp);
+    const u = e.tripUpdate; const tid = u && u.trip && u.trip.tripId; if (!tid) { S.noTid++; continue; }
+    note('tripUpdateKeys', Object.keys(u).sort().join(',')); note('tripKeys', Object.keys(u.trip).sort().join(','));
+    note('scheduleRelationship', String(u.trip.scheduleRelationship));
+    const c = resolve(tid, now);
+    if (!c) { S.unmatched++; if (S.unmatchedSample.length < 12 && !S.unmatchedSample.includes(tid)) S.unmatchedSample.push(tid); continue; }
+    const T = getTrip(tid, c, now, first); T.tu = true; T.lastSeen = now; seen.tu.add(tid);
+    const stu = u.stopTimeUpdate || [];
+    inc(S.stuN, stu.length > 9 ? '10+' : String(stu.length));
+    for (const s of stu.slice(0, 3)) { note('stopTimeUpdateKeys', Object.keys(s).sort().join(',')); if (s.arrival) note('stu.arrivalKeys', Object.keys(s.arrival).sort().join(',')); }
+    const sd = stu.map(s => (s.arrival && s.arrival.delay != null) ? +s.arrival.delay : (s.departure && s.departure.delay != null) ? +s.departure.delay : null).filter(x => x != null);
+    if (new Set(sd).size > 1) { S.stuVary++; if (S.stuSample.length < 6) S.stuSample.push(trunc(JSON.stringify({ tid, delay: u.delay, stu: stu.slice(0, 6) }), 500)); }
+    T.stuStop = stu[0] ? String(stu[0].stopId) : null;
+    const cancelled = String(e.id).startsWith('TUCANCEL') || u.trip.scheduleRelationship === 'CANCELED';
+    if (cancelled && !T.cancelled) {
+      T.cancelled = true;
+      if (S.cancelled.length < 200) S.cancelled.push(`${T.line} ${tid} sale ${hm(c.s)} desde ${stopName(c, 0)}`);
+      if (S.samples.cancel.length < 2) S.samples.cancel.push(trunc(JSON.stringify(e), 700));
+      ev('CANCEL', `${T.line} ${tid} sale ${hm(c.s)} desde ${stopName(c, 0)}`, now);
+    }
+    if (S.samples.tu.length < 3 && !cancelled && (stu.length > 1 || S.samples.tu.length < 1)) S.samples.tu.push(trunc(JSON.stringify(e), 900));
+    if (cancelled) continue;
+    let d = typeof u.delay === 'number' ? u.delay : (sd.length ? sd[0] : null);
+    if (u.delay != null && sd.length && +u.delay !== sd[0]) S.stuMismatch++;
+    if (d != null && d !== T.delay) {
+      const prev = T.delay;
+      if (prev != null) { T.changes++; keep(S.jumps, d - prev); } else T.firstDelay = d;
+      T.delay = d; T.maxDelay = Math.max(T.maxDelay, d); T.delays.push([now, d]);
+      const where = T.veh && T.veh.i >= 0 ? ` en ${T.veh.st} ${T.veh.i}/${c.pat.stops.length - 1}` : '';
+      ev('DLY', `${T.line} ${tid} ${fd(prev)}→${fd(d)}${where}`, now);
+    }
+  }
+}
+
+function processVP(json, now, first, seen) {
+  const ents = json.entity || []; S.rtVpAll = ents.length;
+  for (const e of ents) {
+    note('entityKeys(vp)', Object.keys(e).sort().join(','));
+    const v = e.vehicle; const tid = v && v.trip && v.trip.tripId; if (!tid) { S.noTid++; continue; }
+    note('vehicleKeys', Object.keys(v).sort().join(',')); if (v.position) note('positionKeys', Object.keys(v.position).sort().join(','));
+    const c = resolve(tid, now);
+    if (!c) { S.vpUnmatched++; continue; }
+    const T = getTrip(tid, c, now, first); T.vp = true; T.lastSeen = now; seen.vp.add(tid);
+    const st = v.currentStatus || '', stopId = v.stopId == null ? '' : String(v.stopId), vts = (+v.timestamp || 0) * 1000;
+    const label = (v.vehicle && v.vehicle.label) || '', m = PLAT.exec(label), plat = m ? m[1] : null;
+    note('currentStatus', st); note('labelShape', label.replace(/\d+/g, '#').replace(/[A-Za-z]+(?=-)/, 'L').slice(0, 40));
+    inc(S.vehStatus, st);
+    if (S.samples.vp.length < 3 && (S.samples.vp.length < 1 || plat)) S.samples.vp.push(trunc(JSON.stringify(e), 700));
+    const i = c.pat.stops.indexOf(stopId), n1 = c.pat.stops.length - 1, prev = T.veh;
+    if (!prev || prev.st !== st || prev.stopId !== stopId || prev.plat !== plat) {
+      ev('VEH', `${T.line} ${tid} ${st} ${stopId}(${i}/${n1} ${stopName(c, i)}) vía ${plat || '-'} ${fd(T.delay)}`, now);
+    }
+    if (T.stuStop != null) inc(S.stuVsVeh, T.stuStop === stopId ? 'same' : 'diff');
+    // vehículo congelado / retraso de publicación
+    if (vts && vts !== T.vts) { if (T.vts) keep(S.vAge, Math.round((now - vts) / 1000)); T.vts = vts; T.vtsSince = now; }
+    else if (!T.frozen && now - T.vtsSince > 180e3 && now < c.e) { T.frozen = true; S.frozen++; ev('FROZEN', `${T.line} ${tid} sin cambio de timestamp desde ${hm(T.vtsSince)} (${st} ${stopId})`, now); }
+    // andén
+    if (st === 'STOPPED_AT') inc(S, plat ? 'stoppedWithPlat' : 'stoppedNoPlat');
+    if (plat && stopId) {
+      const P = T.plat.get(stopId);
+      if (!P) { const lead = i >= 0 ? (schedAt(c, i, 'dep') - now) / 1000 : NaN; T.plat.set(stopId, { p: plat, lead }); if (Number.isFinite(lead)) keep(S.platLead, lead); ev('PLT', `${T.line} ${tid} ${stopId}(${stopName(c, i)}) vía ${plat} antelación ${Number.isFinite(lead) ? Math.round(lead) + ' s' : '?'}`, now); }
+      else if (P.p !== plat) { S.platChange++; ev('PLT!', `${T.line} ${tid} ${stopId} vía ${P.p}→${plat}`, now); P.p = plat; }
+    }
+    // observaciones reales: solo transiciones vistas por nosotros
+    const real = vts || now;
+    if (prev && st === 'STOPPED_AT' && i >= 0 && (prev.st !== 'STOPPED_AT' || prev.stopId !== stopId) && !T.obsArr.has(i)) {
+      T.obsArr.add(i);
+      const obs = (real - schedAt(c, i, 'arr')) / 1000, rt0 = T.delay;
+      const pr = h => { const p = delayAt(T, real - h * 60e3); return p == null ? null : obs - p; };
+      const e0 = rt0 == null ? null : obs - rt0, e5 = pr(5), e10 = pr(10), e20 = pr(20);
+      if (e0 != null) keep(S.err.h0, e0); if (e5 != null) keep(S.err.h5, e5); if (e10 != null) keep(S.err.h10, e10); if (e20 != null) keep(S.err.h20, e20);
+      keep(S.arrObs, [T.line, +(i / Math.max(1, n1)).toFixed(2), Math.round(obs), rt0, e5 == null ? null : Math.round(e5), e10 == null ? null : Math.round(e10), e20 == null ? null : Math.round(e20), tid, i, n1], 4000);
+      ev('OBS', `${T.line} ${tid} llegada a ${stopName(c, i)} (${i}/${n1}) real ${fd(obs)} · RT ahora ${fd(rt0)}${e10 != null ? ' · error con 10 min de antelación ' + fd(e10) : ''}`, now);
+    }
+    if (prev && prev.st === 'STOPPED_AT' && (st !== 'STOPPED_AT' || stopId !== prev.stopId) && prev.i >= 0 && !T.obsDep.has(prev.i)) {
+      T.obsDep.add(prev.i);
+      const obs = (real - schedAt(c, prev.i, 'dep')) / 1000;
+      keep(S.depObs, [T.line, prev.i, Math.round(obs), T.delay]);
+    }
+    T.veh = { st, stopId, plat, i, ts: vts }; if (i >= 0) T.vi = Math.max(T.vi, i);
+  }
+}
+
+function coverage(now, seen) {
+  const run = ST.all.filter(c => c.s <= now && now <= c.e);
+  let tu = 0, vp = 0, both = 0;
+  for (const c of run) { const a = seen.tu.has(c.tid), b = seen.vp.has(c.tid); if (a) tu++; if (b) vp++; if (a && b) both++; if (!a && !b && S.noRt.length < 12 && !S.noRt.some(x => x.startsWith(c.tid + ' '))) S.noRt.push(`${c.tid} ${c.pat.short} sale ${hm(c.s)} (visto ${hm(now)})`); }
+  const k = S.cov; k.polls++; k.run += run.length; k.tu += tu; k.vp += vp; k.both += both;
+  const h = k.byHour[hourOf(now)] || (k.byHour[hourOf(now)] = [0, 0, 0, 0]); h[0]++; h[1] += run.length; h[2] += tu; h[3] += vp;
+}
+
+function flush(T, now, why) {
+  trips.delete(T.tid);
+  const L = S.lines[T.line] || (S.lines[T.line] = { trips: 0, first: [], last: [], max: [], ch: [] });
+  if (T.delay != null) { L.trips++; keep(L.first, T.firstDelay ?? T.delay); keep(L.last, T.delay); keep(L.max, T.maxDelay); keep(L.ch, T.changes); }
+  const n1 = T.c.pat.stops.length - 1;
+  if (!T.cancelled && T.vi >= 0 && T.vi < n1 - 1 && now < T.c.e + (T.delay || 0) * 1000 - 120e3 && !T.early) {
+    const s = `${T.line} ${T.tid} desaparece en parada ${T.vi}/${n1} (${stopName(T.c, T.vi)}), fin previsto ${hm(T.c.e)}, visto por última vez ${hm(T.lastSeen)}`;
+    if (S.vanish.length < 100) S.vanish.push(s); ev('GONE?', s, now);
+  }
+}
+function sweep(now) {
+  const lim = Math.max(120e3, 3 * interval);
+  for (const T of [...trips.values()]) if (now - T.lastSeen > lim || now - T.first > 8 * 3600e3) flush(T, now, 'gone');
+}
+
+function processAlerts(json, now) {
+  const cur = new Map();
+  for (const e of json.entity || []) {
+    const a = e.alert; if (!a) continue;
+    const tr = t => { const l = (t && t.translation) || []; return (l.find(x => x.language === 'es') || l[0] || {}).text || ''; };
+    const ie = a.informedEntity || [], ap = (a.activePeriod || [])[0] || {};
+    for (const k of Object.keys(a)) note('alertKeys', k);
+    cur.set(String(e.id), { id: String(e.id), routes: [...new Set(ie.map(x => x.routeId).filter(Boolean))].join(','), stops: ie.filter(x => x.stopId).length, cause: a.cause || '', effect: a.effect || '',
+      start: ap.start ? hm(+ap.start * 1000) : '', end: ap.end ? hm(+ap.end * 1000) : '', head: tr(a.headerText), text: tr(a.descriptionText).replace(/\s+/g, ' ').trim() });
+  }
+  for (const [id, a] of cur) if (!prevAlerts.has(id)) { S.alertAdd++; ev('ALERT+', `${id} rutas=${a.routes} paradas=${a.stops} ${a.cause}/${a.effect} ${a.start}-${a.end} «${trunc(a.head || a.text, 160)}»`, now); }
+  for (const [id] of prevAlerts) if (!cur.has(id)) { S.alertDel++; ev('ALERT-', id, now); }
+  prevAlerts = cur; S.alerts = [...cur.values()];
+}
+
+/* ---------- Un sondeo ---------- */
+async function poll() {
+  if (busy) return; busy = true; const t0 = Date.now();
+  try {
+    if (!ST || ST.key !== dateKey(t0)) { await loadStatic(t0); ev('STATIC', S.staticInfo, t0); }
+    if (S.lastPoll && t0 - S.lastPoll > Math.max(120e3, 3 * interval)) { S.gaps++; S.gapSec += Math.round((t0 - S.lastPoll) / 1000); ev('GAP', `sin sondeos durante ${Math.round((t0 - S.lastPoll) / 1000)} s (pestaña dormida, ordenador suspendido o sin red)`, t0); }
+    const wantAl = t0 - lastAlerts > ALERT_EVERY;
+    const [a, b, c] = await Promise.allSettled([get('trip_updates'), get('vehicle_positions'), wantAl ? get('alerts') : Promise.resolve(null)]);
+    const now = Date.now();
+    for (const [n, r] of [['trip_updates', a], ['vehicle_positions', b], ['alerts', c]]) if (r.status === 'rejected') { S.errors++; ev('ERR', `${n}: ${r.reason && r.reason.message || r.reason}`, now); }
+    if (c.status === 'fulfilled' && c.value) { lastAlerts = now; header('alerts', c.value, now); processAlerts(c.value, now); }
+    if (a.status === 'fulfilled' && b.status === 'fulfilled') {
+      const first = pollN === 0, seen = { tu: new Set(), vp: new Set() };
+      header('trip_updates', a.value, now); header('vehicle_positions', b.value, now);
+      processTU(a.value, now, first, seen); processVP(b.value, now, first, seen);
+      coverage(now, seen); sweep(now);
+      S.polls++; pollN++; S.lastPoll = now;
+    }
+  } catch (e) { S.errors++; ev('ERR', 'poll: ' + (e && e.message || e)); }
+  finally { busy = false; render(); save(); }
+}
+
+/* ---------- Informe ---------- */
+function report() {
+  const now = Date.now(), L = [], P = s => L.push(s), H = s => { P(''); P('-- ' + s + ' --'); };
+  P('== RESUMEN DEL MONITOR (Trenecitos) ==');
+  P(`Generado: ${dt(now)} (hora de Madrid) · inicio de la recogida: ${dt(S.t0)} · duración ${dur(now - S.t0)}`);
+  P(`Sondeos correctos: ${S.polls} (cada ${interval / 1000} s) · errores: ${S.errors} · huecos (GAP): ${S.gaps} (${S.gapSec} s en total)`);
+  P(`Horario estático: ${S.staticInfo || '–'}`);
+
+  H('RED (proxy /api/rt)');
+  for (const [k, n] of Object.entries(S.net)) P(`${k}: ok=${n.ok} err=${n.err} · latencia ms ${stat(n.ms, x => Math.round(x))} · tamaño KB ${stat(n.kb, x => Math.round(x))} · HTTP ${JSON.stringify(n.status)} · x-upstream-cache ${JSON.stringify(n.cache)}`);
+
+  H('FRESCURA');
+  for (const k of Object.keys(S.hdrInt)) P(`${k}: header.timestamp cambia cada (s) ${stat(S.hdrInt[k], x => Math.round(x))} · edad al recibir (s) ${stat(S.hdrAge[k] || [], x => Math.round(x))}`);
+  P(`vehicle.timestamp: edad al detectar cambio (s) ${stat(S.vAge, x => Math.round(x))}`);
+  P(`Vehículos "congelados" (>3 min sin cambiar timestamp): ${S.frozen}`);
+
+  H('COBERTURA: trenes de Madrid que según horario deberían estar circulando');
+  const k = S.cov;
+  if (k.polls) {
+    P(`media por sondeo: circulando ${r1(k.run / k.polls)} · con trip_update ${pct(k.tu, k.run)} · con posición ${pct(k.vp, k.run)} · con ambos ${pct(k.both, k.run)}`);
+    P('por hora (Madrid): ' + Object.keys(k.byHour).sort((x, y) => x - y).map(h => { const v = k.byHour[h]; return `${two(h)}h[sondeos ${v[0]}, circ ${r1(v[1] / v[0])}, TU ${pct(v[2], v[1])}, VP ${pct(v[3], v[1])}]`; }).join(' '));
+  }
+  P(`Entidades en el feed (todos los núcleos, último sondeo): trip_updates=${S.rtTuAll} vehicle_positions=${S.rtVpAll}`);
+  P(`Entidades RT sin viaje en el horario de Madrid: TU=${S.unmatched} VP=${S.vpUnmatched} (si no es 0, mezcla de otros núcleos o horario desfasado) · ejemplos: ${S.unmatchedSample.join(' ') || '–'}`);
+  P(`Ids con varios días candidatos: ${S.ambig} · entidades sin tripId: ${S.noTid}`);
+  P(`Ejemplos de trenes previstos en marcha SIN ningún dato RT: ${S.noRt.join(' | ') || '–'}`);
+  P(`Antelación con la que aparece un viaje en RT (s antes de su salida prevista; negativo = ya había salido): ${stat(S.lead, x => Math.round(x))}`);
+
+  H('RETRASOS (minutos) por línea · viajes ya terminados');
+  for (const [l, v] of Object.entries(S.lines).sort()) P(`${l}: viajes=${v.trips} · inicial ${stat(v.first.map(x => x / 60))} · final ${stat(v.last.map(x => x / 60))} · máximo ${stat(v.max.map(x => x / 60))} · cambios/viaje ${stat(v.ch)}`);
+  P(`Saltos entre dos retrasos consecutivos del mismo viaje (s): ${stat(S.jumps, x => Math.round(x))}`);
+
+  H('STOPTIMEUPDATE');
+  P(`nº de stopTimeUpdate por viaje: ${JSON.stringify(S.stuN)}`);
+  P(`viajes con retrasos DISTINTOS entre sus stopTimeUpdate: ${S.stuVary} · tripUpdate.delay distinto del primer stopTimeUpdate: ${S.stuMismatch}`);
+  P(`stopId del 1.er stopTimeUpdate frente al stopId del vehículo: ${JSON.stringify(S.stuVsVeh)}`);
+  for (const s of S.stuSample) P('  muestra: ' + s);
+
+  H('PRECISIÓN: retraso publicado frente a lo realmente observado (llegada = primer STOPPED_AT visto; error = observado − (horario + retraso publicado))');
+  const ab = a => a.map(Math.abs);
+  for (const [lab, a] of [['en el momento de la llegada', S.err.h0], ['con 5 min de antelación', S.err.h5], ['con 10 min de antelación', S.err.h10], ['con 20 min de antelación', S.err.h20]])
+    P(`${lab}: error con signo (s) ${stat(a, x => Math.round(x))}  |  absoluto p50=${r1(q(ab(a), .5))} p90=${r1(q(ab(a), .9))}`);
+  const thirds = [[0, .34, 'primer tercio'], [.34, .67, 'segundo tercio'], [.67, 1.01, 'último tercio']];
+  for (const [lo, hi, lab] of thirds) { const a = S.arrObs.filter(o => o[1] >= lo && o[1] < hi && o[5] != null).map(o => Math.abs(o[5])); P(`error absoluto con 10 min de antelación, ${lab} del recorrido: ${stat(a, x => Math.round(x))}`); }
+  const dep = S.depObs.map(o => o[2] - (o[3] ?? 0)).filter(Number.isFinite);
+  P(`salida observada (cota superior) − (horario + retraso publicado), s: ${stat(dep, x => Math.round(x))} (n ${S.depObs.length})`);
+  P('peores 8 casos (línea frac real_s rt_s e5 e10 e20 viaje parada): ' + [...S.arrObs].filter(o => o[5] != null).sort((x, y) => Math.abs(y[5]) - Math.abs(x[5])).slice(0, 8).map(o => o.slice(0, 9).join(' ')).join(' | '));
+
+  H('ANDENES');
+  P(`paradas en STOPPED_AT con vía en la etiqueta: ${S.stoppedWithPlat} · sin vía: ${S.stoppedNoPlat}`);
+  P(`antelación con la que aparece la vía (s antes de la salida prevista de esa parada): ${stat(S.platLead, x => Math.round(x))}`);
+  P(`cambios de vía una vez publicada: ${S.platChange}`);
+
+  H('VEHÍCULOS');
+  P(`currentStatus (cuenta de lecturas): ${JSON.stringify(S.vehStatus)}`);
+  P(`viajes que desaparecen del feed antes de tiempo (${S.vanish.length}): ${S.vanish.slice(0, 10).join(' | ') || '–'}`);
+
+  H('CANCELACIONES');
+  P(`${S.cancelled.length}: ${S.cancelled.slice(0, 25).join(' | ') || '–'}`);
+
+  H('ALERTAS');
+  P(`altas=${S.alertAdd} bajas=${S.alertDel} · vigentes ahora: ${S.alerts.length}`);
+  for (const a of S.alerts.slice(0, 15)) P(`  ${a.id} rutas=${a.routes || '-'} paradas=${a.stops} ${a.cause}/${a.effect} ${a.start}-${a.end} «${trunc(a.head || a.text, 220)}»`);
+
+  H('ESTRUCTURA DE LOS FEEDS (valores distintos vistos)');
+  for (const [kd, set] of Object.entries(S.enums)) P(`${kd}: ${trunc(JSON.stringify(set), 420)}`);
+  for (const [kd, a] of Object.entries(S.samples)) for (const s of a) P(`muestra ${kd}: ${s}`);
+
+  H('EVENTOS (recuento por tipo)');
+  P(JSON.stringify(S.evCount));
+  return L.join('\n');
+}
+
+/* ---------- Interfaz ---------- */
+function render() {
+  const now = Date.now(), n = S.net;
+  const age = k => S.hdrLast[k] ? Math.round(now / 1000 - S.hdrLast[k]) + ' s' : '–';
+  const run = [...trips.values()].filter(T => T.veh && now - T.lastSeen < 120e3 && T.veh.i >= 0).sort((a, b) => (a.line + a.tid).localeCompare(b.line + b.tid));
+  $('live').textContent =
+    `${S.running ? 'EN MARCHA' : 'PARADA'} · sondeos ${S.polls} · errores ${S.errors} · eventos ${events.length} · viajes seguidos ${trips.size} · en marcha con posición ${run.length}\n` +
+    `edad del feed: trip_updates ${age('trip_updates')} · vehicle_positions ${age('vehicle_positions')} · latencia ${n.trip_updates ? (n.trip_updates.ms.slice(-1)[0] ?? '–') : '–'} ms · observaciones de llegada ${S.arrObs.length} · desde ${dt(S.t0)}\n` +
+    run.slice(0, 24).map(T => `${T.line.padEnd(4)} ${T.tid.padEnd(16)} ${fd(T.delay).padStart(6)}  ${T.veh.st.padEnd(13)} ${String(T.veh.i).padStart(2)}/${T.c.pat.stops.length - 1} ${stopName(T.c, T.veh.i)}${T.veh.plat ? '  vía ' + T.veh.plat : ''}`).join('\n');
+  $('go').textContent = S.running ? 'Pausar' : 'Iniciar'; $('go').classList.toggle('on', S.running);
+  const el = $('log');
+  const stick = el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+  if (view === 'events') { el.textContent = events.slice(-400).join('\n'); if (stick) el.scrollTop = el.scrollHeight; }
+}
+function showSummary() { view = 'summary'; $('log').textContent = report(); $('log').scrollTop = 0; }
+const allText = () => report() + '\n\n== EVENTOS (' + events.length + ') ==\n' + events.join('\n');
+async function copy(text, msg) {
+  try { await navigator.clipboard.writeText(text); } catch { const t = document.createElement('textarea'); t.value = text; document.body.append(t); t.select(); document.execCommand('copy'); t.remove(); }
+  $('status').textContent = msg + ' · ' + new Date().toLocaleTimeString();
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify({ S, events: events.slice(-6000) })); }
+  catch { try { localStorage.setItem(KEY, JSON.stringify({ S, events: events.slice(-1500) })); } catch {} }
+}
+
+/* Temporizador en un Worker: no lo frena el navegador cuando la pestaña está en segundo plano. */
+let worker = null;
+function startTimer() {
+  stopTimer();
+  try {
+    worker = new Worker(URL.createObjectURL(new Blob([`let t=null;onmessage=e=>{clearInterval(t);if(e.data>0)t=setInterval(()=>postMessage(1),e.data)}`], { type: 'text/javascript' })));
+    worker.onmessage = poll; worker.postMessage(interval);
+  } catch { timer = setInterval(poll, interval); }
+}
+function stopTimer() { if (worker) { worker.postMessage(0); worker.terminate(); worker = null; } if (timer) { clearInterval(timer); timer = null; } }
+async function wake() { try { if ('wakeLock' in navigator && $('wake').checked && S.running && !wl) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); } } catch {} }
+
+function setRunning(on) {
+  S.running = on; interval = +$('ivl').value * 1000;
+  if (on) { ev('START', `intervalo ${interval / 1000} s`); startTimer(); poll(); wake(); } else { ev('STOP', ''); stopTimer(); if (wl) { wl.release(); wl = null; } }
+  save(); render();
+}
+$('go').onclick = () => setRunning(!S.running);
+$('ivl').onchange = () => { interval = +$('ivl').value * 1000; if (S.running) startTimer(); };
+$('wake').onchange = () => { if ($('wake').checked) wake(); else if (wl) { wl.release(); wl = null; } };
+$('b-sum').onclick = showSummary;
+$('b-ev').onclick = () => { view = 'events'; render(); };
+$('b-copy-sum').onclick = () => copy(report(), 'Resumen copiado');
+$('b-copy-ev').onclick = () => copy(events.slice(-Math.max(10, +$('nev').value || 300)).join('\n'), 'Eventos copiados');
+$('b-dl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([allText()], { type: 'text/plain' })); a.download = `trenecitos-monitor-${dateKey(Date.now())}.txt`; a.click(); };
+$('b-clear').onclick = () => { if (!confirm('¿Borrar todo lo recogido?')) return; const run = S.running; S = fresh(); events = []; trips.clear(); pollN = 0; prevAlerts = new Map(); lastAlerts = 0; S.running = run; save(); render(); };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') wake(); });
+setInterval(() => { if (S.running) save(); }, 60e3); setInterval(render, 5e3);
+
+try { const old = JSON.parse(localStorage.getItem(KEY) || 'null'); if (old && old.S) { S = Object.assign(fresh(), old.S); events = old.events || []; ev('RESUME', `sesión anterior restaurada (${S.polls} sondeos)`); if (S.running) { S.running = false; setTimeout(() => setRunning(true), 300); } } } catch {}
+render();
+window.__monitor = { report, poll, get S() { return S; }, get events() { return events; }, trips };
+</script>
+</body>
+</html>
