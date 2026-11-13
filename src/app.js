@@ -1,5 +1,5 @@
 import * as store from './store.js';
-import { etaParts } from './format.js';
+import { etaParts, etaKey, etaHTML } from './format.js';
 import { panelHTML, emptyHTML, detailHTML } from './ui.js';
 import { pickerHTML, initPicker } from './picker.js';
 
@@ -70,11 +70,10 @@ function renderBoard() {
 function tick() {
   const now = Date.now();
   document.querySelectorAll('[data-eta]').forEach(el => {
-    const e = etaParts(Number(el.dataset.eta), now);
-    const b = el.querySelector('b'), i = el.querySelector('i');
-    if (b.textContent !== e.big) b.textContent = e.big;
-    if (i.textContent !== e.unit) i.textContent = e.unit;
+    const e = etaParts(Number(el.dataset.eta), now), k = etaKey(e);
+    if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = etaHTML(e); }
     el.classList.toggle('is-soon', e.soon);
+    el.classList.toggle('is-long', e.long);
   });
 }
 

@@ -129,11 +129,16 @@ svg { display: block; }
 .tr .badge { align-self: start; margin-top: 3px; }
 .tr__dep { display: block; font: 700 30px/1 var(--cond); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
 .tr__dep s { margin-right: 8px; font-size: 19px; font-weight: 500; color: var(--faint); }
+.tr__arr { display: block; margin-top: 7px; font: 500 18px/1.1 var(--cond); letter-spacing: .01em; color: var(--dim); }
+.tr__arr b { margin-left: 3px; font: 700 25px/1 var(--cond); font-variant-numeric: tabular-nums; color: var(--ink); }
 .tr__sub { display: block; margin-top: 5px; font: 400 11.5px/1.25 var(--mono); color: var(--dim); }
 .tr__day { font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--ink); }
-.tr__eta { text-align: right; line-height: .9; color: var(--ink); }
-.tr__eta b { display: block; font: 700 40px/.9 var(--cond); font-variant-numeric: tabular-nums; }
-.tr__eta i { display: block; margin-top: 3px; font: 400 11px/1 var(--mono); font-style: normal; color: var(--dim); }
+/* Cuenta atrás: número grande con su unidad al lado, en la misma línea (7 min · 1 h 02 min). */
+.tr__eta, .hero__eta { --s: 40px; display: flex; align-items: baseline; justify-content: flex-end; white-space: nowrap; line-height: .9; color: var(--ink); }
+.tr__eta b, .hero__eta b { font: 700 var(--s)/.9 var(--cond); font-variant-numeric: tabular-nums; }
+.tr__eta i, .hero__eta i { margin: 0 9px 0 5px; font: 600 max(17px, calc(var(--s) * .34))/1 var(--cond); font-style: normal; letter-spacing: .02em; color: var(--dim); }
+.tr__eta i:last-child, .hero__eta i:last-child { margin-right: 0; }
+.tr__eta.is-long, .hero__eta.is-long { --s: 34px; }
 .tr__eta.is-soon b { color: var(--accent-hi); }
 .tr__state { grid-column: 2 / -1; display: flex; align-items: center; gap: 8px; font: 500 11.5px/1.2 var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
 .tr__state::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
@@ -149,9 +154,12 @@ svg { display: block; }
 .tr--next { padding-top: 16px; padding-bottom: 14px; background: var(--panel-2); }
 .tr--next .tr__dep { font-size: 40px; }
 .tr--next .tr__dep s { font-size: 22px; }
-.tr--next .tr__eta b { font-size: 68px; }
+.tr--next .tr__eta { --s: 66px; }
+.tr--next .tr__eta.is-long { --s: 46px; }
+.tr--next .tr__arr { font-size: 20px; }
+.tr--next .tr__arr b { font-size: 29px; }
 .tr--next .badge { margin-top: 6px; }
-.tr--off .tr__dep, .tr--off .tr__sub { text-decoration: line-through; text-decoration-color: var(--faint); color: var(--faint); }
+.tr--off .tr__dep, .tr--off .tr__arr, .tr--off .tr__arr b, .tr--off .tr__sub { text-decoration: line-through; text-decoration-color: var(--faint); color: var(--faint); }
 .tr--off .tr__eta b { color: var(--faint); }
 
 .empty { grid-column: 1 / -1; max-width: 420px; margin: 12vh auto 0; text-align: left; color: var(--dim); display: grid; gap: 14px; }
@@ -187,9 +195,8 @@ svg { display: block; }
 .hero { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 22px; }
 .hero__time { font: 700 64px/.85 var(--cond); font-variant-numeric: tabular-nums; }
 .hero__time s { margin-right: 10px; font-size: 28px; font-weight: 500; color: var(--faint); }
-.hero__eta { text-align: right; color: var(--ink); line-height: .85; }
-.hero__eta b { font: 700 64px/.85 var(--cond); font-variant-numeric: tabular-nums; }
-.hero__eta i { font: 400 12px/1 var(--mono); font-style: normal; color: var(--dim); }
+.hero__eta { --s: 64px; }
+.hero__eta.is-long { --s: 48px; }
 .hero__eta.is-soon b { color: var(--accent-hi); }
 .hero__sub { margin-top: 12px; font: 400 12px/1.4 var(--mono); color: var(--dim); }
 
@@ -254,7 +261,8 @@ svg { display: block; }
 @media (min-width: 760px) {
   :root { --pad: 24px; }
   .board { gap: 18px; }
-  .tr--next .tr__eta b { font-size: 72px; }
+  .tr--next .tr__eta { --s: 72px; }
+  .tr--next .tr__eta.is-long { --s: 50px; }
 }
 /* Escritorio: dos paneles, con aire a los lados. */
 @media (min-width: 900px) {

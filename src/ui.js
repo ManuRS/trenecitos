@@ -1,4 +1,4 @@
-import { esc, hhmm, hhmmss, etaParts, ago, delayInfo, dayTag } from './format.js';
+import { esc, hhmm, hhmmss, etaParts, etaKey, etaHTML, ago, delayInfo, dayTag } from './format.js';
 import { badge } from './lines.js';
 
 export const ICON = {
@@ -30,11 +30,12 @@ function trainRow(t, i, now) {
     ${badge(t.line)}
     <span class="tr__main">
       <span class="tr__dep">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${hhmm(t.estDep)}</span>
-      <span class="tr__sub">${dayTag(t.estDep, now) ? `<b class="tr__day">${dayTag(t.estDep, now)}</b> · ` : ''}llega ${hhmm(t.estArr)} · hacia ${esc(t.headsign)}</span>
+      <span class="tr__arr">Llega a las <b>${hhmm(t.estArr)}</b></span>
+      <span class="tr__sub">${dayTag(t.estDep, now) ? `<b class="tr__day">${dayTag(t.estDep, now)}</b> · ` : ''}Tren sentido ${esc(t.headsign)}</span>
     </span>
     ${t.status === 'cancelled'
       ? '<span class="tr__eta"><b>—</b></span>'
-      : `<span class="tr__eta${e.soon ? ' is-soon' : ''}" data-eta="${t.estDep}"><b>${e.big}</b><i>${e.unit}</i></span>`}
+      : `<span class="tr__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${t.estDep}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</span>`}
     <span class="tr__state tr__state--${st.cls}">${esc(st.text)}</span>
   </button>`;
 }
@@ -120,7 +121,7 @@ export function detailHTML(d, now) {
 
       <div class="hero">
         <div class="hero__time">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${t.status === 'cancelled' ? hhmm(t.schedDep) : hhmm(t.estDep)}</div>
-        ${t.status === 'cancelled' ? '' : `<div class="hero__eta${e.soon ? ' is-soon' : ''}" data-eta="${t.estDep}"><b>${e.big}</b> <i>${e.unit}</i></div>`}
+        ${t.status === 'cancelled' ? '' : `<div class="hero__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${t.estDep}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</div>`}
       </div>
       <p class="hero__sub">sale de ${esc(d.stops[d.iFrom].name)} · llega a ${esc(d.stops[d.iTo].name)} a las ${hhmm(t.status === 'cancelled' ? t.schedArr : t.estArr)}</p>
 
@@ -130,7 +131,7 @@ export function detailHTML(d, now) {
       </section>
 
       <section class="kv">
-        <div><h3>Retraso</h3><p class="kv__v kv__v--${dl.cls}">${t.delay == null ? '—' : esc(dl.text)}</p></div>
+        <div><h3>Retraso</h3><p class="kv__v kv__v--${dl.cls}">${t.delay == null ? '—' : esc(dl.short)}</p></div>
         <div><h3>Paradas</h3><p class="kv__v">${plural(t.hops, 'parada', 'paradas')}</p></div>
       </section>
       <p class="fine">Renfe publica un único retraso por tren, no uno por parada: las horas estimadas son el horario más ese retraso.</p>
