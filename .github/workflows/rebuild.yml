@@ -1,0 +1,14 @@
+# Redespliega Trenecitos cada día para renovar los horarios (el GTFS de Renfe trae ~30 días y se regenera a diario).
+# Copiar a .github/workflows/rebuild.yml y crear el secreto CF_DEPLOY_HOOK con la URL del Deploy hook de Cloudflare Pages.
+name: Redesplegar horarios
+on:
+  schedule:
+    - cron: '17 3 * * *'      # 03:17 UTC, de madrugada
+  workflow_dispatch: {}
+jobs:
+  hook:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS -X POST "$CF_DEPLOY_HOOK"
+        env:
+          CF_DEPLOY_HOOK: ${{ secrets.CF_DEPLOY_HOOK }}
