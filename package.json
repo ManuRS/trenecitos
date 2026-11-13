@@ -1,0 +1,15 @@
+{
+  "name": "trenecitos",
+  "private": true,
+  "type": "module",
+  "description": "PWA para ver si llegas al tren (Cercanías Madrid, datos abiertos de Renfe)",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/build.mjs && python3 -m http.server 8080 -d dist"
+  },
+  "devDependencies": {
+    "@fontsource/barlow-condensed": "^5.2.0",
+    "@fontsource/ibm-plex-mono": "^5.2.0",
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}
