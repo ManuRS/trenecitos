@@ -30,6 +30,9 @@
   <label class="file">4. Elegir zip descargado a mano<input type="file" id="f-zip" accept=".zip"></label>
 </div>
 <div class="row">
+  <label><input type="checkbox" id="via" checked> Usar el proxy <code>/api</code> de esta web (sin marcar: directo a Renfe)</label>
+</div>
+<div class="row">
   <button class="main" id="b-copy">Copiar log</button>
   <button id="b-clear">Limpiar</button>
   <span id="status" class="dim"></span>
@@ -39,12 +42,19 @@
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 'use strict';
-const URLS = {
+const DIRECT = {
   trip_updates: 'https://gtfsrt.renfe.com/trip_updates.json',
   vehicle_positions: 'https://gtfsrt.renfe.com/vehicle_positions.json',
   alerts: 'https://gtfsrt.renfe.com/alerts.json',
   gtfs: 'https://ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip'
 };
+const API = {
+  trip_updates: '/api/rt/trip_updates',
+  vehicle_positions: '/api/rt/vehicle_positions',
+  alerts: '/api/rt/alerts',
+  gtfs: '/api/gtfs'
+};
+const U = k => (document.getElementById('via').checked ? API : DIRECT)[k];
 const PROBE_STOPS = ['17004', '18002']; // Tres Cantos, Madrid-Nuevos Ministerios
 
 const $ = id => document.getElementById(id);
@@ -76,9 +86,10 @@ async function fetchJson(name, url) {
     const res = await fetch(url, { cache: 'no-store' });
     const text = await res.text();
     const ms = Math.round(performance.now() - t0);
-    log(`[${name}] HTTP ${res.status} ${res.type} · ${(text.length / 1024).toFixed(0)} KB · ${ms} ms`);
+    log(`[${name}] ${url} → HTTP ${res.status} ${res.type} · ${(text.length / 1024).toFixed(0)} KB · ${ms} ms`);
     const hd = []; res.headers.forEach((v, k) => hd.push(k + '=' + v));
     log(`[${name}] cabeceras visibles: ${hd.join(' | ') || '(ninguna)'}`);
+    if (!res.ok) { log(`[${name}] cuerpo: ${text.slice(0, 300)}`); return null; }
     return JSON.parse(text);
   } catch (e) {
     log(`[${name}] FALLO con CORS normal: ${e.name}: ${e.message}`);
@@ -94,10 +105,10 @@ async function fetchJson(name, url) {
 
 async function probeFeeds() {
   h('Entorno');
-  log(`origin=${location.origin} · ${new Date().toISOString()} · ${navigator.userAgent}`);
+  log(`origin=${location.origin} · proxy /api=${$('via').checked} · ${new Date().toISOString()} · ${navigator.userAgent}`);
 
   h('trip_updates.json');
-  const tu = await fetchJson('trip_updates', URLS.trip_updates);
+  const tu = await fetchJson('trip_updates', U('trip_updates'));
   if (tu) {
     const ents = tu.entity || [];
     const ts = Number(tu.header && tu.header.timestamp);
@@ -132,7 +143,7 @@ async function probeFeeds() {
   }
 
   h('vehicle_positions.json');
-  const vp = await fetchJson('vehicle_positions', URLS.vehicle_positions);
+  const vp = await fetchJson('vehicle_positions', U('vehicle_positions'));
   if (vp) {
     const ents = vp.entity || [];
     const ts = Number(vp.header && vp.header.timestamp);
@@ -161,7 +172,7 @@ async function probeFeeds() {
   }
 
   h('alerts.json');
-  const al = await fetchJson('alerts', URLS.alerts);
+  const al = await fetchJson('alerts', U('alerts'));
   if (al) {
     const ents = al.entity || [];
     log(`header=${j(al.header)} · entidades=${ents.length}`);
@@ -178,7 +189,7 @@ async function poll() {
   for (let i = 1; i <= 3; i++) {
     const t0 = performance.now();
     try {
-      const r = await fetch(URLS.trip_updates, { cache: 'no-store' });
+      const r = await fetch(U('trip_updates'), { cache: 'no-store' });
       const d = await r.json();
       const ts = Number(d.header.timestamp);
       log(`#${i} header.timestamp=${ts} (${new Date(ts * 1000).toLocaleTimeString()}) entidades=${d.entity.length} · cambio=${prev === null ? '-' : ts - prev} s · ${Math.round(performance.now() - t0)} ms`);
@@ -189,15 +200,16 @@ async function poll() {
 }
 
 // ---------- GTFS estático ----------
+// Renfe rellena con espacios los campos y hasta los nombres de columna: se recorta todo.
 function parseLine(line) {
-  if (line.indexOf('"') === -1) return line.split(',');
+  if (line.indexOf('"') === -1) return line.split(',').map(s => s.trim());
   const out = []; let cur = '', q = false;
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
     if (q) { if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
     else if (c === '"') q = true; else if (c === ',') { out.push(cur); cur = ''; } else cur += c;
   }
-  out.push(cur); return out;
+  out.push(cur); return out.map(s => s.trim());
 }
 function rowsOf(text) {
   const ls = text.split(/\r?\n/); if (ls.length && ls[0].charCodeAt(0) === 0xFEFF) ls[0] = ls[0].slice(1);
@@ -281,7 +293,7 @@ async function analyzeZip(buf, label) {
     log(`route_id de esos viajes: ${topN(routeIds)}`);
     if (T.routes) { const rh = parseLine(T.routes[0]); const ri = col(rh, 'route_id'); const set = new Set(routeIds.keys()); log(`routes.txt de esas rutas:\n   ` + T.routes.filter((l, i) => i > 0 && set.has(parseLine(l)[ri])).join('\n   ')); }
     if (fwd.length) {
-      const sid = fwd[0].id; const rows = T.stop_times.filter((l, i) => i > 0 && l.startsWith(sid + ','));
+      const sid = fwd[0].id; const rows = T.stop_times.filter((l, i) => i > 0 && parseLine(l)[iT] === sid);
       log(`viaje ejemplo ${sid} (todas las paradas, ${rows.length}):\n   ` + rows.slice(0, 40).join('\n   '));
     }
     // servicios activos hoy
@@ -310,14 +322,15 @@ async function tryDownload() {
   setBusy(true, 'descargando…');
   const t0 = performance.now();
   try {
-    const r = await fetch(URLS.gtfs, { cache: 'no-store' });
-    log(`HTTP ${r.status} ${r.type} · ${Math.round(performance.now() - t0)} ms`);
+    const r = await fetch(U('gtfs'), { cache: 'no-store' });
+    log(`${U('gtfs')} → HTTP ${r.status} ${r.type} · ${Math.round(performance.now() - t0)} ms`);
+    if (!r.ok) { log(`cuerpo: ${(await r.text()).slice(0, 300)}`); return; }
     const buf = await r.arrayBuffer();
     log(`recibidos ${(buf.byteLength / 1024 / 1024).toFixed(1)} MB`);
     await analyzeZip(buf, 'descarga directa');
   } catch (e) {
     log(`FALLO: ${e.name}: ${e.message}`);
-    try { const r2 = await fetch(URLS.gtfs, { mode: 'no-cors' }); log(`con no-cors: type=${r2.type} → responde pero sin CORS`); }
+    try { const r2 = await fetch(U('gtfs'), { mode: 'no-cors' }); log(`con no-cors: type=${r2.type} → responde pero sin CORS`); }
     catch (e2) { log(`ni con no-cors: ${e2.message} → certificado/red/bloqueo`); }
     log('→ Descarga el zip a mano desde el navegador y usa el botón 4.');
   }
