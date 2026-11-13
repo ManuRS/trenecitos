@@ -10,4 +10,4 @@ Hecha en JavaScript (sin framework) y desplegada en Cloudflare Pages.
 
 ## Datos
 
-Información de fuentes abiertas de Renfe Operadora (licencia CC BY 4.0): horarios (GTFS) y tiempo real (GTFS-RT) publicados en [data.renfe.com](https://data.renfe.com).
+Información de fuentes abiertas de Renfe Operadora (licencia CC BY 4.0): horarios (GTFS) y tiempo real (GTFS-RT) publicados en [data.renfe.com](https://data.renfe.com)
