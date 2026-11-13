@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trenecitos · sonda de datos Renfe</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 15px/1.4 system-ui, sans-serif; background: #111; color: #ddd; margin: 0; padding: 16px; max-width: 980px; margin-inline: auto; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { margin: 4px 0 12px; color: #999; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; align-items: center; }
+  button, label.file { background: #2a2a2a; color: #eee; border: 1px solid #555; padding: 9px 13px; border-radius: 4px; font: inherit; cursor: pointer; }
+  button:hover, label.file:hover { background: #383838; }
+  button.main { background: #d8a21f; color: #111; border-color: #d8a21f; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=file] { display: none; }
+  pre { background: #000; border: 1px solid #333; padding: 10px; overflow: auto; max-height: 70vh; white-space: pre-wrap; word-break: break-word; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; }
+  .ok { color: #7fd27f; } .bad { color: #ff7b72; } .dim { color: #888; }
+</style>
+</head>
+<body>
+<h1>Sonda de datos de Renfe</h1>
+<p>Pulsa los pasos en orden y, al final, <b>Copiar log</b> y pégamelo. Mejor abrirla desde una URL https (GitHub Pages) o con un servidor local, no con doble clic en el archivo.</p>
+
+<div class="row">
+  <button class="main" id="b-feeds">1. Probar feeds en vivo</button>
+  <button id="b-poll">2. Sondear trip_updates ×3 (60 s)</button>
+  <button id="b-zip">3. Intentar descargar el GTFS estático</button>
+  <label class="file">4. Elegir zip descargado a mano<input type="file" id="f-zip" accept=".zip"></label>
+</div>
+<div class="row">
+  <button class="main" id="b-copy">Copiar log</button>
+  <button id="b-clear">Limpiar</button>
+  <span id="status" class="dim"></span>
+</div>
+<pre id="log"></pre>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+'use strict';
+const URLS = {
+  trip_updates: 'https://gtfsrt.renfe.com/trip_updates.json',
+  vehicle_positions: 'https://gtfsrt.renfe.com/vehicle_positions.json',
+  alerts: 'https://gtfsrt.renfe.com/alerts.json',
+  gtfs: 'https://ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip'
+};
+const PROBE_STOPS = ['17004', '18002']; // Tres Cantos, Madrid-Nuevos Ministerios
+
+const $ = id => document.getElementById(id);
+const logEl = $('log');
+let lines = [];
+const state = { rtTripIds: new Set(), rtTripSamples: [] };
+
+function log(msg = '') {
+  lines.push(msg);
+  logEl.textContent = lines.join('\n');
+  logEl.scrollTop = logEl.scrollHeight;
+}
+const h = t => { log(''); log('=== ' + t + ' ==='); };
+const j = (o, max = 900) => { const s = JSON.stringify(o); return s.length > max ? s.slice(0, max) + '…(+' + (s.length - max) + ')' : s; };
+const tick = () => new Promise(r => setTimeout(r, 0));
+const topN = (map, n = 25) => [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => k + ':' + v).join('  ');
+const inc = (m, k) => m.set(k, (m.get(k) || 0) + 1);
+const suffix = id => (String(id).match(/([A-Z]+\d*[a-z]?)$/) || [, '?'])[1];
+const prefix4 = id => String(id).slice(0, 4);
+
+function setBusy(on, text = '') {
+  document.querySelectorAll('button').forEach(b => { if (b.id !== 'b-copy' && b.id !== 'b-clear') b.disabled = on; });
+  $('status').textContent = text;
+}
+
+async function fetchJson(name, url) {
+  const t0 = performance.now();
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    const text = await res.text();
+    const ms = Math.round(performance.now() - t0);
+    log(`[${name}] HTTP ${res.status} ${res.type} · ${(text.length / 1024).toFixed(0)} KB · ${ms} ms`);
+    const hd = []; res.headers.forEach((v, k) => hd.push(k + '=' + v));
+    log(`[${name}] cabeceras visibles: ${hd.join(' | ') || '(ninguna)'}`);
+    return JSON.parse(text);
+  } catch (e) {
+    log(`[${name}] FALLO con CORS normal: ${e.name}: ${e.message}`);
+    try {
+      const r2 = await fetch(url, { mode: 'no-cors', cache: 'no-store' });
+      log(`[${name}] con no-cors responde type=${r2.type} → el servidor contesta pero NO permite leerlo desde otro origen (falta CORS)`);
+    } catch (e2) {
+      log(`[${name}] ni con no-cors: ${e2.message} → red, certificado o bloqueo`);
+    }
+    return null;
+  }
+}
+
+async function probeFeeds() {
+  h('Entorno');
+  log(`origin=${location.origin} · ${new Date().toISOString()} · ${navigator.userAgent}`);
+
+  h('trip_updates.json');
+  const tu = await fetchJson('trip_updates', URLS.trip_updates);
+  if (tu) {
+    const ents = tu.entity || [];
+    const ts = Number(tu.header && tu.header.timestamp);
+    log(`header=${j(tu.header)} · antigüedad=${Math.round(Date.now() / 1000 - ts)} s · entidades=${ents.length}`);
+    const kinds = new Map(), pre = new Map(), suf = new Map(), nstops = new Map(), sched = new Map();
+    const hits = { }; PROBE_STOPS.forEach(s => hits[s] = []);
+    let withDeparture = 0, withTimeOnly = 0, keysSeen = new Set();
+    for (const e of ents) {
+      inc(kinds, String(e.id).split('_')[0]);
+      const t = e.tripUpdate || {}; const id = t.trip && t.trip.tripId;
+      if (id) { state.rtTripIds.add(id); inc(pre, prefix4(id)); inc(suf, suffix(id)); inc(sched, t.trip.scheduleRelationship || '-'); }
+      Object.keys(t).forEach(k => keysSeen.add('tripUpdate.' + k)); Object.keys(t.trip || {}).forEach(k => keysSeen.add('trip.' + k));
+      const st = t.stopTimeUpdate || []; inc(nstops, st.length > 40 ? '40+' : String(Math.floor(st.length / 5) * 5) + '+');
+      for (const s of st) {
+        Object.keys(s).forEach(k => keysSeen.add('stu.' + k));
+        if (s.departure) withDeparture++;
+        if (s.arrival && !s.arrival.delay && s.arrival.time) withTimeOnly++;
+        if (PROBE_STOPS.includes(String(s.stopId)) && hits[s.stopId].length < 4) hits[s.stopId].push({ tripId: id, delay: t.delay, stu: s });
+      }
+    }
+    log(`tipos de entidad: ${topN(kinds)}`);
+    log(`scheduleRelationship: ${topN(sched)}`);
+    log(`prefijo 4 primeras cifras del tripId: ${topN(pre, 40)}`);
+    log(`sufijo del tripId: ${topN(suf, 60)}`);
+    log(`nº de paradas por actualización (cubos de 5): ${topN(nstops, 20)}`);
+    log(`campos vistos: ${[...keysSeen].join(', ')} · stu con departure=${withDeparture} · stu con solo time=${withTimeOnly}`);
+    log(`ejemplos: ${j(ents.slice(0, 2), 1400)}`);
+    const cancel = ents.find(e => String(e.id).startsWith('TUCANCEL'));
+    if (cancel) log(`ejemplo cancelación: ${j(cancel, 400)}`);
+    for (const s of PROBE_STOPS) log(`paradas ${s} en trip_updates (${hits[s].length} mostradas): ${j(hits[s], 1600)}`);
+    state.rtTripSamples = ents.slice(0, 5).map(e => e.tripUpdate && e.tripUpdate.trip && e.tripUpdate.trip.tripId);
+  }
+
+  h('vehicle_positions.json');
+  const vp = await fetchJson('vehicle_positions', URLS.vehicle_positions);
+  if (vp) {
+    const ents = vp.entity || [];
+    const ts = Number(vp.header && vp.header.timestamp);
+    log(`header=${j(vp.header)} · antigüedad=${Math.round(Date.now() / 1000 - ts)} s · entidades=${ents.length}`);
+    const lab = new Map(), st = new Map(), pre = new Map(), plat = new Map();
+    let noPos = 0, stop00000 = 0, inTU = 0;
+    const madridLike = [];
+    for (const e of ents) {
+      const v = e.vehicle || {}; const id = v.trip && v.trip.tripId;
+      const l = (v.vehicle && v.vehicle.label) || '';
+      inc(lab, l.split('-')[0] || '?'); inc(st, v.currentStatus || '-');
+      if (id) { inc(pre, prefix4(id)); if (state.rtTripIds.has(id)) inTU++; }
+      if (!v.position) noPos++;
+      if (String(v.stopId) === '00000') stop00000++;
+      if (/PLATF/i.test(l)) inc(plat, 'con_andén');
+      if (PROBE_STOPS.includes(String(v.stopId)) && madridLike.length < 4) madridLike.push(e);
+    }
+    log(`prefijo del label: ${topN(lab, 60)}`);
+    log(`prefijo 4 cifras del tripId: ${topN(pre, 40)}`);
+    log(`currentStatus: ${topN(st)} · sin posición=${noPos} · stopId 00000=${stop00000} · con andén en label=${topN(plat)}`);
+    log(`tripIds de vehículos que también salen en trip_updates: ${inTU}/${ents.length}`);
+    log(`ejemplos: ${j(ents.slice(0, 2), 900)}`);
+    log(`vehículos en 17004/18002: ${j(madridLike, 1200)}`);
+    const withPlat = ents.filter(e => /PLATF/i.test((e.vehicle && e.vehicle.vehicle && e.vehicle.vehicle.label) || '')).slice(0, 3);
+    log(`ejemplos con andén: ${j(withPlat, 900)}`);
+  }
+
+  h('alerts.json');
+  const al = await fetchJson('alerts', URLS.alerts);
+  if (al) {
+    const ents = al.entity || [];
+    log(`header=${j(al.header)} · entidades=${ents.length}`);
+    log(`ejemplos: ${j(ents.slice(0, 3), 2400)}`);
+    const ie = new Map();
+    ents.forEach(e => ((e.alert && e.alert.informedEntity) || []).forEach(x => Object.keys(x).forEach(k => inc(ie, k))));
+    log(`campos de informedEntity: ${topN(ie)}`);
+  }
+}
+
+async function poll() {
+  h('Sondeo de trip_updates (3 lecturas, 1 cada ~21 s)');
+  let prev = null;
+  for (let i = 1; i <= 3; i++) {
+    const t0 = performance.now();
+    try {
+      const r = await fetch(URLS.trip_updates, { cache: 'no-store' });
+      const d = await r.json();
+      const ts = Number(d.header.timestamp);
+      log(`#${i} header.timestamp=${ts} (${new Date(ts * 1000).toLocaleTimeString()}) entidades=${d.entity.length} · cambio=${prev === null ? '-' : ts - prev} s · ${Math.round(performance.now() - t0)} ms`);
+      prev = ts;
+    } catch (e) { log(`#${i} fallo: ${e.message}`); }
+    if (i < 3) { setBusy(true, `esperando 21 s (${i}/3)…`); await new Promise(r => setTimeout(r, 21000)); }
+  }
+}
+
+// ---------- GTFS estático ----------
+function parseLine(line) {
+  if (line.indexOf('"') === -1) return line.split(',');
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) { if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true; else if (c === ',') { out.push(cur); cur = ''; } else cur += c;
+  }
+  out.push(cur); return out;
+}
+function rowsOf(text) {
+  const ls = text.split(/\r?\n/); if (ls.length && ls[0].charCodeAt(0) === 0xFEFF) ls[0] = ls[0].slice(1);
+  while (ls.length && ls[ls.length - 1] === '') ls.pop();
+  return ls;
+}
+const col = (header, name) => header.indexOf(name);
+const toSec = t => { const m = /^(\d+):(\d\d):(\d\d)$/.exec((t || '').trim()); return m ? (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]) : null; };
+
+async function analyzeZip(buf, label) {
+  h('GTFS estático (' + label + ')');
+  const zip = await JSZip.loadAsync(buf);
+  const names = Object.keys(zip.files).filter(n => !zip.files[n].dir);
+  log(`archivos: ${names.join(', ')}`);
+  const T = {};
+  for (const n of names) {
+    if (!n.endsWith('.txt')) continue;
+    setBusy(true, 'leyendo ' + n + '…');
+    const text = await zip.file(n).async('string');
+    const ls = rowsOf(text);
+    T[n.replace(/^.*\//, '').replace('.txt', '')] = ls;
+    log(`${n}: ${(text.length / 1024 / 1024).toFixed(1)} MB · ${ls.length - 1} filas · cabecera: ${ls[0]}`);
+    log(`   ej: ${ls.slice(1, 3).join(' || ')}`);
+    await tick();
+  }
+
+  // stops
+  if (T.stops) {
+    const hd = parseLine(T.stops[0]); const iId = col(hd, 'stop_id'), iName = col(hd, 'stop_name');
+    const dist = new Map(); const found = [];
+    for (let i = 1; i < T.stops.length; i++) {
+      const r = parseLine(T.stops[i]); inc(dist, String(r[iId]).slice(0, 2));
+      if (PROBE_STOPS.includes(r[iId]) || /tres cantos|nuevos ministerios|atocha|chamart|sol$/i.test(r[iName] || '')) if (found.length < 14) found.push(T.stops[i]);
+    }
+    log(`stops: distribución por 2 primeras cifras del stop_id: ${topN(dist, 40)}`);
+    log(`stops de interés:\n   ` + found.join('\n   '));
+  }
+  // routes
+  if (T.routes) {
+    log(`routes (primeras 25 de ${T.routes.length - 1}):\n   ` + T.routes.slice(0, 26).join('\n   '));
+  }
+  // trips
+  let tripRows = new Map(); let tripHd = null;
+  if (T.trips) {
+    tripHd = parseLine(T.trips[0]); const iT = col(tripHd, 'trip_id');
+    const pre = new Map(), suf = new Map();
+    for (let i = 1; i < T.trips.length; i++) { const r = parseLine(T.trips[i]); tripRows.set(r[iT], r); inc(pre, prefix4(r[iT])); inc(suf, suffix(r[iT])); }
+    log(`trips: prefijo 4 cifras: ${topN(pre, 40)}`);
+    log(`trips: sufijo: ${topN(suf, 60)}`);
+    let hit = 0, miss = []; state.rtTripIds.forEach(id => { if (tripRows.has(id)) hit++; else if (miss.length < 5) miss.push(id); });
+    if (state.rtTripIds.size) log(`CRUCE con tiempo real: ${hit}/${state.rtTripIds.size} tripIds de trip_updates existen tal cual en trips.txt · sin coincidencia ej.: ${miss.join(', ')}`);
+    else log('(para cruzar con tiempo real, ejecuta antes el paso 1)');
+  }
+  // stop_times: trayecto de prueba
+  if (T.stop_times) {
+    const hd = parseLine(T.stop_times[0]);
+    const iT = col(hd, 'trip_id'), iS = col(hd, 'stop_id'), iQ = col(hd, 'stop_sequence'), iA = col(hd, 'arrival_time'), iD = col(hd, 'departure_time');
+    const at = { }; PROBE_STOPS.forEach(s => at[s] = new Map());
+    let over24 = 0;
+    for (let i = 1; i < T.stop_times.length; i++) {
+      const l = T.stop_times[i];
+      if (i % 400000 === 0) { setBusy(true, `stop_times ${Math.round(i / T.stop_times.length * 100)}%`); await tick(); }
+      // filtro barato antes de parsear
+      let need = false; for (const s of PROBE_STOPS) if (l.indexOf(',' + s + ',') !== -1 || l.indexOf(s) !== -1) { need = true; break; }
+      if (!need) continue;
+      const r = parseLine(l);
+      if (PROBE_STOPS.includes(r[iS])) {
+        at[r[iS]].set(r[iT], { seq: +r[iQ], arr: r[iA], dep: r[iD] });
+        if (/^2[4-9]:/.test(r[iA])) over24++;
+      }
+    }
+    log(`stop_times: viajes que paran en ${PROBE_STOPS[0]}: ${at[PROBE_STOPS[0]].size} · en ${PROBE_STOPS[1]}: ${at[PROBE_STOPS[1]].size} · horas ≥24:00 vistas: ${over24}`);
+    const both = [];
+    at[PROBE_STOPS[0]].forEach((a, id) => { const b = at[PROBE_STOPS[1]].get(id); if (b) both.push({ id, ...{ a0: a.arr, s0: a.seq, a1: b.arr, s1: b.seq } }); });
+    const fwd = both.filter(x => x.s0 < x.s1), rev = both.filter(x => x.s0 > x.s1);
+    log(`viajes con ambas: ${both.length} (sentido ${PROBE_STOPS[0]}→${PROBE_STOPS[1]}: ${fwd.length}, inverso: ${rev.length})`);
+    log(`ejemplos ${PROBE_STOPS[0]}→${PROBE_STOPS[1]}:\n   ` + fwd.slice(0, 6).map(x => `${x.id} ${x.a0}(seq ${x.s0}) → ${x.a1}(seq ${x.s1}) · trips.txt: ${(tripRows.get(x.id) || []).join(',')}`).join('\n   '));
+    if (tripHd) log(`(columnas trips: ${tripHd.join(',')})`);
+    const routeIds = new Map(); const iR = tripHd ? col(tripHd, 'route_id') : -1;
+    if (iR >= 0) fwd.forEach(x => { const r = tripRows.get(x.id); if (r) inc(routeIds, r[iR]); });
+    log(`route_id de esos viajes: ${topN(routeIds)}`);
+    if (T.routes) { const rh = parseLine(T.routes[0]); const ri = col(rh, 'route_id'); const set = new Set(routeIds.keys()); log(`routes.txt de esas rutas:\n   ` + T.routes.filter((l, i) => i > 0 && set.has(parseLine(l)[ri])).join('\n   ')); }
+    if (fwd.length) {
+      const sid = fwd[0].id; const rows = T.stop_times.filter((l, i) => i > 0 && l.startsWith(sid + ','));
+      log(`viaje ejemplo ${sid} (todas las paradas, ${rows.length}):\n   ` + rows.slice(0, 40).join('\n   '));
+    }
+    // servicios activos hoy
+    if (T.calendar && tripHd) {
+      const ch = parseLine(T.calendar[0]); const iSv = col(ch, 'service_id');
+      const d = new Date(); const ymd = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+      const wd = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][d.getDay()];
+      const iW = col(ch, wd), iSt = col(ch, 'start_date'), iEn = col(ch, 'end_date');
+      let mn = 1e9, mx = 0; const active = new Set();
+      for (let i = 1; i < T.calendar.length; i++) { const r = parseLine(T.calendar[i]); mn = Math.min(mn, +r[iSt]); mx = Math.max(mx, +r[iEn]); if (r[iW] === '1' && +r[iSt] <= ymd && +r[iEn] >= ymd) active.add(r[iSv]); }
+      log(`calendar: rango ${mn}..${mx} · servicios activos hoy (${wd}, ${ymd}) por calendar.txt: ${active.size}`);
+      const iSvT = col(tripHd, 'service_id');
+      const today = fwd.filter(x => { const r = tripRows.get(x.id); return r && active.has(r[iSvT]); });
+      log(`viajes ${PROBE_STOPS[0]}→${PROBE_STOPS[1]} con servicio activo hoy (sin contar calendar_dates): ${today.length}`);
+      if (T.calendar_dates) {
+        const cd = parseLine(T.calendar_dates[0]); const iDt = col(cd, 'date');
+        const todayRows = T.calendar_dates.filter((l, i) => i > 0 && parseLine(l)[iDt] === String(ymd));
+        log(`calendar_dates de hoy: ${todayRows.length} · ej: ${todayRows.slice(0, 4).join(' || ')}`);
+      }
+    } else log('calendar.txt: no existe o no hay trips (¿solo calendar_dates?)');
+  }
+}
+
+async function tryDownload() {
+  h('Descarga directa del GTFS estático');
+  setBusy(true, 'descargando…');
+  const t0 = performance.now();
+  try {
+    const r = await fetch(URLS.gtfs, { cache: 'no-store' });
+    log(`HTTP ${r.status} ${r.type} · ${Math.round(performance.now() - t0)} ms`);
+    const buf = await r.arrayBuffer();
+    log(`recibidos ${(buf.byteLength / 1024 / 1024).toFixed(1)} MB`);
+    await analyzeZip(buf, 'descarga directa');
+  } catch (e) {
+    log(`FALLO: ${e.name}: ${e.message}`);
+    try { const r2 = await fetch(URLS.gtfs, { mode: 'no-cors' }); log(`con no-cors: type=${r2.type} → responde pero sin CORS`); }
+    catch (e2) { log(`ni con no-cors: ${e2.message} → certificado/red/bloqueo`); }
+    log('→ Descarga el zip a mano desde el navegador y usa el botón 4.');
+  }
+}
+
+async function run(fn, ...a) {
+  setBusy(true, 'trabajando…');
+  try { await fn(...a); } catch (e) { log('ERROR no controlado: ' + (e.stack || e)); }
+  setBusy(false, 'listo');
+}
+
+$('b-feeds').onclick = () => run(probeFeeds);
+$('b-poll').onclick = () => run(poll);
+$('b-zip').onclick = () => run(tryDownload);
+$('f-zip').onchange = ev => { const f = ev.target.files[0]; if (!f) return; run(async () => { log(`zip elegido: ${f.name} ${(f.size / 1024 / 1024).toFixed(1)} MB`); await analyzeZip(await f.arrayBuffer(), f.name); }); };
+$('b-clear').onclick = () => { lines = []; logEl.textContent = ''; };
+$('b-copy').onclick = async () => {
+  const text = lines.join('\n');
+  try { await navigator.clipboard.writeText(text); $('status').textContent = 'copiado (' + text.length + ' caracteres)'; }
+  catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); $('status').textContent = 'copiado (método alternativo)'; }
+};
+</script>
+</body>
+</html>
