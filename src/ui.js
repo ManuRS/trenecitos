@@ -4,6 +4,7 @@ import { badge } from './lines.js';
 export const ICON = {
   dots: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg>',
   close: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>',
+  check: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>',
   swap: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2v11M2 10l3 3 3-3M11 14V3M8 6l3-3 3 3"/></svg>',
 };
 
@@ -22,26 +23,39 @@ function stateLine(t) {
   return { cls: d.cls, text: [d.text, phase, via].filter(Boolean).join(' · ') };
 }
 
-function trainRow(t, i, now) {
+function trainRow(t, i, now, ui) {
   const e = etaParts(t.estDep, now);
   const changed = t.status !== 'cancelled' && hhmm(t.schedDep) !== hhmm(t.estDep);
   const st = stateLine(t);
-  return `<button type="button" class="tr${i === 0 ? ' tr--next' : ''}${t.status === 'cancelled' ? ' tr--off' : ''}" data-act="train" data-key="${esc(t.key)}">
-    ${badge(t.line)}
-    <span class="tr__main">
-      <span class="tr__dep">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${hhmm(t.estDep)}</span>
-      <span class="tr__arr">Llega a las <b>${hhmm(t.estArr)}</b></span>
-      <span class="tr__sub">${dayTag(t.estDep, now) ? `<b class="tr__day">${dayTag(t.estDep, now)}</b> · ` : ''}Tren sentido ${esc(t.headsign)}</span>
-    </span>
-    ${t.status === 'cancelled'
-      ? '<span class="tr__eta"><b>—</b></span>'
-      : `<span class="tr__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${t.estDep}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</span>`}
-    <span class="tr__state tr__state--${st.cls}">${esc(st.text)}</span>
-  </button>`;
+  const live = t.status !== 'cancelled';
+  const mine = ui.rideKey === t.key;
+  return `<div class="tr${i === 0 ? ' tr--next' : ''}${live ? ' tr--pin' : ' tr--off'}${mine ? ' tr--mine' : ''}">
+    <button type="button" class="tr__open" data-act="train" data-key="${esc(t.key)}">
+      ${badge(t.line)}
+      <span class="tr__main">
+        <span class="tr__dep">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${hhmm(t.estDep)}</span>
+        <span class="tr__arr">Llega a las <b>${hhmm(t.estArr)}</b></span>
+        <span class="tr__sub">${dayTag(t.estDep, now) ? `<b class="tr__day">${dayTag(t.estDep, now)}</b> · ` : ''}Tren sentido ${esc(t.headsign)}</span>
+      </span>
+      ${live
+        ? `<span class="tr__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${t.estDep}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</span>`
+        : '<span class="tr__eta"><b>—</b></span>'}
+      <span class="tr__state tr__state--${st.cls}">${esc(st.text)}</span>
+    </button>
+    ${live ? `<button type="button" class="tr__pin${mine ? ' is-on' : ''}" data-act="ride" data-key="${esc(t.key)}" aria-pressed="${mine}">${mine ? ICON.check + 'Mi tren' : 'Es mi tren'}</button>` : ''}
+  </div>`;
+}
+
+/** Color del símbolo de ruta según cómo va el próximo tren: en hora, con retraso, cancelado, sin datos. */
+function routeTone(d) {
+  if (!d || d.error || d.noDirect) return 'none';
+  const t = d.trains.find(x => x.status !== 'cancelled');
+  if (!t) return d.trains.length ? 'off' : 'none';
+  const c = delayInfo(t.delay).cls;
+  return c === 'ok' || c === 'early' ? 'ok' : c === 'late' ? 'late' : 'none';
 }
 
 export function panelHTML(trip, d, ui, now) {
-  const hops = d ? d.hops : null;
   const menu = ui.menu === trip.id;
   const confirm = ui.confirm === trip.id;
   let body;
@@ -49,13 +63,12 @@ export function panelHTML(trip, d, ui, now) {
   else if (d.error) body = `<p class="note note--bad">${d.reason === 'stale' ? 'Los horarios guardados no incluyen hoy. Recarga la página en un rato.' : d.reason === 'station' ? 'Una de las estaciones ya no existe en los horarios de Renfe. Quita el trayecto y vuelve a crearlo.' : 'No se han podido cargar los horarios de Renfe.'}</p>`;
   else if (d.noDirect) body = '<p class="note">No hay tren directo entre estas dos estaciones. Hará falta un transbordo.</p>';
   else if (!d.trains.length) body = '<p class="note">No hay trenes en las próximas horas.</p>';
-  else body = d.trains.map((t, i) => trainRow(t, i, now)).join('');
+  else body = d.trains.map((t, i) => trainRow(t, i, now, ui)).join('');
 
   return `<article class="panel" data-trip="${esc(trip.id)}">
     <header class="panel__head">
-      <div class="route">
+      <div class="route route--${routeTone(d)}">
         <div class="route__row"><i class="route__dot"></i><span class="route__name">${esc(trip.from.name)}</span></div>
-        <div class="route__row route__row--mid"><i class="route__track"></i><span class="route__hops">${hops != null ? plural(hops, 'parada', 'paradas') : d && d.noDirect ? 'sin tren directo' : '…'}</span></div>
         <div class="route__row"><i class="route__dot route__dot--end"></i><span class="route__name">${esc(trip.to.name)}</span></div>
       </div>
       <button type="button" class="icon-btn" data-act="menu" aria-label="Opciones del trayecto" aria-expanded="${menu}">${ICON.dots}</button>
@@ -79,7 +92,7 @@ export function emptyHTML() {
 
 /* ---------- Detalle de un tren ---------- */
 
-export function detailHTML(d, now) {
+export function detailHTML(d, now, isRide = false) {
   const t = d.train;
   const e = etaParts(t.estDep, now);
   const dl = delayInfo(t.delay);
@@ -145,5 +158,6 @@ export function detailHTML(d, now) {
         <h3>Avisos de Renfe</h3>
         ${d.alerts.map(a => `<div class="alert">${a.title ? `<p class="alert__t">${esc(a.title)}</p>` : ''}<p>${esc(a.text)}</p></div>`).join('')}
       </section>` : ''}
-    </div>`;
+    </div>
+    ${t.status === 'cancelled' ? '' : `<div class="sheet__foot"><button type="button" class="btn-add btn-add--big${isRide ? ' is-on' : ''}" data-act="ride-sheet">${isRide ? ICON.check + 'Mi tren · quitar' : 'Este es mi tren'}</button></div>`}`;
 }

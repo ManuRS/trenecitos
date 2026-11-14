@@ -29,6 +29,7 @@ const hash = n => { let x = (n * 2654435761) >>> 0; x ^= x >>> 15; x = Math.imul
 const idx = id => ROUTE.findIndex(r => r[0] === id);
 
 export const stations = async () => ROUTE.map(([id, name]) => ({ id, name }));
+export const info = async () => ({ built: null, first: null, last: null });
 
 /** Parada i de un viaje en el sentido dado, con su offset en minutos desde el origen del viaje. */
 function stopsOf(south) {
@@ -69,7 +70,7 @@ function trainFor(t, from, to, now) {
   };
 }
 
-export async function departures(from, to, now = Date.now()) {
+export async function departures(from, to, now = Date.now(), count = 3) {
   const south = idx(from) < idx(to);
   const base = Math.floor(now / HEAD);
   const trains = [];
@@ -79,7 +80,7 @@ export async function departures(from, to, now = Date.now()) {
   }
   trains.sort((a, b) => a.schedDep - b.schedDep);
   const updatedAt = now - (now % 20000);
-  return { updatedAt, hops: Math.abs(idx(to) - idx(from)), trains: trains.slice(0, 3) };
+  return { updatedAt, hops: Math.abs(idx(to) - idx(from)), trains: trains.slice(0, count) };
 }
 
 export async function detail(key, from, to, now = Date.now()) {
@@ -114,5 +115,8 @@ export async function detail(key, from, to, now = Date.now()) {
     text: 'Posibles retrasos de hasta 10 minutos en ambos sentidos. (Aviso de demostración.)',
   }];
 
-  return { train, stops, iFrom, iTo, here, positionAt, alerts, updatedAt: now - (now % 20000) };
+  const vi = here.kind === 'stopped' || here.kind === 'end' ? here.hereIdx : here.kind === 'incoming' || here.kind === 'moving' ? here.hereIdx + 1 : -1;
+  const vstatus = here.kind === 'stopped' || here.kind === 'end' ? 'STOPPED_AT' : here.kind === 'incoming' ? 'INCOMING_AT' : here.kind === 'moving' ? 'IN_TRANSIT_TO' : '';
+  stops.forEach((s, n) => { s.passed = t.cancelled ? false : vi >= 0 ? n < vi : s.est < now; });
+  return { train, stops, iFrom, iTo, here, vi, vstatus, positionAt, alerts, updatedAt: now - (now % 20000) };
 }

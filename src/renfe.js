@@ -175,7 +175,13 @@ async function context(now) {
 
 export const stations = async () => (await loadIndex()).stops;
 
-export async function departures(from, to, now = Date.now()) {
+/** Datos del horario cargado: cuándo se construyó y qué días cubre. */
+export async function info() {
+  const idx = await loadIndex(), d = [...idx.dates].sort();
+  return { built: idx.built || null, first: d[0] || null, last: d[d.length - 1] || null };
+}
+
+export async function departures(from, to, now = Date.now(), count = 3) {
   let ctx;
   try { ctx = await context(now); } catch (e) { console.error(e); return { error: true, reason: 'net' }; }
   if (!ctx.hasToday || !ctx.days.length) return { error: true, reason: 'stale' };
@@ -199,7 +205,7 @@ export async function departures(from, to, now = Date.now()) {
   const trains = []; let live = 0;
   for (const t of all) {
     trains.push(t);
-    if (t.status !== 'cancelled' && ++live === 3) break;
+    if (t.status !== 'cancelled' && ++live === count) break;
   }
   return {
     updatedAt: ctx.rt.updatedAt, rt: ctx.rt.ok,
@@ -263,5 +269,5 @@ export async function detail(key, from, to, now = Date.now()) {
   })).filter(x => x.text && !seen.has(x.text) && seen.add(x.text)).sort((x, y) => y.start - x.start).slice(0, 3)
     .map((x, k) => ({ id: 'a' + k, title: x.title, text: x.text }));
 
-  return { train, stops, iFrom, iTo, here, positionAt: veh && !cancelled && veh.ts ? veh.ts : null, alerts: list, updatedAt: rt.updatedAt };
+  return { train, stops, iFrom, iTo, here, vi, vstatus: veh && !cancelled ? veh.status : '', positionAt: veh && !cancelled && veh.ts ? veh.ts : null, alerts: list, updatedAt: rt.updatedAt };
 }
