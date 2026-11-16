@@ -78,7 +78,7 @@ export function panelHTML(trip, d, ui, now) {
       <button type="button" class="danger" data-act="remove">${confirm ? 'Pulsa otra vez para quitar' : 'Quitar'}</button>
     </div>` : ''}
     <div class="trains">${body}</div>
-    <footer class="panel__foot"><span data-upd="${d && d.updatedAt ? d.updatedAt : ''}">${!d || d.error ? '' : d.updatedAt ? 'Renfe · actualizado ' + hhmmss(d.updatedAt) : d.rt === false ? 'Sin tiempo real de Renfe · horario' : ''}</span></footer>
+    <footer class="panel__foot"><span data-upd="${d && d.updatedAt ? d.updatedAt : ''}">${!d || d.error ? '' : d.updatedAt ? 'Renfe · actualizado ' + hhmmss(d.updatedAt) : d.rt === false ? 'Renfe no publica tiempo real ahora · horarios teóricos' : ''}</span></footer>
   </article>`;
 }
 
@@ -106,10 +106,10 @@ export function detailHTML(d, now, isRide = false) {
     const here = n === d.here.hereIdx && d.here.kind !== 'sched';
     const tag = n === d.iFrom ? '<em class="tag">Subes</em>' : n === d.iTo ? '<em class="tag">Bajas</em>' : '';
     const sc = hhmm(s.sched) !== hhmm(s.est);
-    return `<li class="st${inSeg ? ' in' : ''}${seg ? ' seg' : ''}${passed ? ' passed' : ''}${here ? ' here' : ''}${n === d.iFrom || n === d.iTo ? ' key' : ''}">
+    return `<li class="st${inSeg ? ' in' : ''}${seg ? ' seg' : ''}${passed ? ' passed' : ''}${here ? ' here' : ''}${n === d.iFrom || n === d.iTo ? ' key' : ''}${s.skipped ? ' skip' : ''}">
       <i class="st__dot"></i>
       <span class="st__name">${esc(s.name)}${tag}</span>
-      <span class="st__time">${sc && t.status !== 'cancelled' ? `<s>${hhmm(s.sched)}</s>` : ''}${hhmm(s.est)}</span>
+      <span class="st__time">${s.skipped ? 'no para' : `${sc && t.status !== 'cancelled' ? `<s>${hhmm(s.sched)}</s>` : ''}${hhmm(s.est)}`}</span>
     </li>`;
   }).join('');
 
@@ -138,6 +138,7 @@ export function detailHTML(d, now, isRide = false) {
       </div>
       <p class="hero__sub">sale de ${esc(d.stops[d.iFrom].name)} · llega a ${esc(d.stops[d.iTo].name)} a las ${hhmm(t.status === 'cancelled' ? t.schedArr : t.estArr)}</p>
 
+      ${t.skipsEnds ? `<p class="note note--bad note--box">Atención: según Renfe, este tren no para en ${esc(d.stops[d.iFrom].skipped ? d.stops[d.iFrom].name : d.stops[d.iTo].name)}.</p>` : ''}
       <section class="now">
         <h3>Ahora</h3>
         ${nowLine}

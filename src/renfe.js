@@ -101,9 +101,12 @@ export function realtime() {
       for (const e of tu.value.entity || []) {
         const u = e.tripUpdate, id = u && u.trip && u.trip.tripId; if (!id) continue;
         const cancelled = String(e.id).startsWith('TUCANCEL') || u.trip.scheduleRelationship === 'CANCELED';
-        const stu = (u.stopTimeUpdate || [])[0];
-        const delay = typeof u.delay === 'number' ? u.delay : stu && stu.arrival && typeof stu.arrival.delay === 'number' ? stu.arrival.delay : null;
-        out.trips.set(id, { cancelled, delay });
+        const all = u.stopTimeUpdate || [];
+        const stu = all.find(x => x.arrival && typeof x.arrival.delay === 'number');
+        const delay = typeof u.delay === 'number' ? u.delay : stu ? stu.arrival.delay : null;
+        // Paradas que el tren se salta (scheduleRelationship SKIPPED); la parada con hora propia no cuenta.
+        const skipped = new Set(all.filter(x => x.scheduleRelationship === 'SKIPPED' && !(stu && String(x.stopId) === String(stu.stopId))).map(x => String(x.stopId)));
+        out.trips.set(id, { cancelled, delay, skipped });
       }
     }
     if (vp.status === 'fulfilled') {
@@ -115,7 +118,10 @@ export function realtime() {
         out.veh.set(id, { status: v.currentStatus || '', stopId: v.stopId == null ? '' : String(v.stopId), platform: m ? m[1] : null, ts: (+v.timestamp || 0) * 1000 });
       }
     }
-    out.updatedAt = ts ? ts * 1000 : null;
+    // Renfe a veces publica los feeds vacíos (de madrugada es normal; en hora de servicio, una avería suya):
+    // la cabecera sigue avanzando pero no hay ni un tren. Entonces no hay tiempo real que enseñar.
+    out.empty = out.ok && !out.trips.size && !out.veh.size;
+    out.updatedAt = ts && !out.empty ? ts * 1000 : null;
     return out;
   })();
   return rtCache.p;
@@ -134,14 +140,21 @@ const tr = t => { const l = (t && t.translation) || []; return (l.find(x => x.la
 
 const number = tid => { const m = /^\d+[A-Za-z](\d+)/.exec(tid); return m ? m[1] : tid; };
 
-/** Posición del tren respecto al patrón: índice de la parada a la que se refiere el vehículo. */
+/**
+ * Parada a la que toca llegar o en la que está parado el tren (índice en el patrón), o -1 si no hay posición.
+ * Medido con 13 h de datos reales: Renfe usa STOPPED_AT e INCOMING_AT con la parada a la que se llega,
+ * pero IN_TRANSIT_TO con la parada que el tren ACABA DE DEJAR (el siguiente evento está en la siguiente
+ * parada en el 89 % de los casos). La corregimos para que "índice" signifique siempre "la que toca".
+ */
 function where(idx, pat, veh) {
   if (!veh) return -1;
   const s = idx.stopIdx.get(veh.stopId);
-  return s === undefined ? -1 : pat.stops.indexOf(s);
+  const k = s === undefined ? -1 : pat.stops.indexOf(s);
+  if (k < 0) return -1;
+  return veh.status === 'IN_TRANSIT_TO' ? Math.min(k + 1, pat.stops.length - 1) : k;
 }
 
-function trainOf(ctx, day, n, from, to) {
+function trainOf(ctx, day, n, from, to, keepSkipped = false) {
   const { idx, rt } = ctx;
   const [tid, p, start] = day.trips[n];
   const pat = idx.patterns[p];
@@ -151,6 +164,8 @@ function trainOf(ctx, day, n, from, to) {
   const sec = (v) => day.base + (start + v * pat.k) * 1000;
   const schedDep = sec(pat.dep[i]), schedArr = sec(pat.arr[j]);
   const u = rt.trips.get(tid), veh = rt.veh.get(tid);
+  const skipsEnds = !!(u && u.skipped && u.skipped.size && (u.skipped.has(String(idx.stops[from].id)) || u.skipped.has(String(idx.stops[to].id))));
+  if (skipsEnds && !keepSkipped) return null;                    // no para donde subes o donde bajas
   const cancelled = !!(u && u.cancelled);
   const delay = cancelled ? null : u && u.delay != null ? u.delay : null;
   const d = (delay || 0) * 1000;
@@ -163,7 +178,7 @@ function trainOf(ctx, day, n, from, to) {
     status: cancelled ? 'cancelled' : veh ? 'running' : 'scheduled',
     hops: j - i, phase,
     platform: vi === i && veh ? veh.platform : null,
-    _passed: vi > i, _vi: vi,
+    _passed: vi > i, _vi: vi, skipsEnds,
   };
 }
 
@@ -208,7 +223,7 @@ export async function departures(from, to, now = Date.now(), count = 3) {
     if (t.status !== 'cancelled' && ++live === count) break;
   }
   return {
-    updatedAt: ctx.rt.updatedAt, rt: ctx.rt.ok,
+    updatedAt: ctx.rt.updatedAt, rt: ctx.rt.ok && !ctx.rt.empty,
     hops: trains.length ? trains.find(t => t.status !== 'cancelled')?.hops ?? trains[0].hops : anyHops,
     noDirect: anyHops == null,
     trains,
@@ -223,7 +238,7 @@ export async function detail(key, from, to, now = Date.now()) {
   if (n == null) throw new Error('Tren no encontrado: ' + key);
   const { idx, rt } = ctx;
   const a = idx.stopIdx.get(from), b = idx.stopIdx.get(to);
-  const train = trainOf(ctx, day, n, a, b);
+  const train = trainOf(ctx, day, n, a, b, true);
   const [, p, start] = day.trips[n];
   const pat = idx.patterns[p];
   const u = rt.trips.get(tid), veh = rt.veh.get(tid);
@@ -236,6 +251,7 @@ export async function detail(key, from, to, now = Date.now()) {
     return {
       id: idx.stops[s].id, name: idx.stops[s].name, sched, est: sched + d,
       platform: veh && vi === k ? veh.platform : null,
+      skipped: !!(u && u.skipped && u.skipped.has(String(idx.stops[s].id))),
       passed: cancelled ? false : veh ? (vi >= 0 ? k < vi : sched + d < now) : sched + d < now,
     };
   });

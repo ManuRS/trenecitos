@@ -116,6 +116,7 @@ svg { display: block; }
 .panel__foot { padding: 8px 14px 10px; border-top: 1px solid var(--rule); font: 400 11px/1.2 var(--mono); color: var(--faint); min-height: 31px; }
 .note { padding: 18px 14px; border-top: 1px solid var(--rule); color: var(--dim); }
 .note--bad { color: var(--red); }
+.note--box { margin-top: 18px; padding: 12px 14px; border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: 2px; background: var(--panel); }
 
 /* ---------- Filas de tren ---------- */
 
@@ -248,6 +249,8 @@ svg { display: block; }
 .st__time { font: 400 13px/1 var(--mono); font-variant-numeric: tabular-nums; }
 .st__time s { margin-right: 6px; color: var(--faint); }
 .st.passed .st__name, .st.passed .st__time { color: var(--faint); }
+.st.skip .st__name { text-decoration: line-through; color: var(--faint); font-weight: 500; }
+.st.skip .st__time { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; }
 .tag { margin-left: 8px; padding: 2px 5px; border: 1px solid var(--dim); border-radius: 2px; font: 500 10px/1 var(--mono); font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); vertical-align: 3px; }
 .st.here .st__dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px rgba(229, 32, 42, .28); }
 .st.here .st__name { color: var(--accent-hi); }
