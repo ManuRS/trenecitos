@@ -4,6 +4,7 @@ import { panelHTML, emptyHTML, detailHTML } from './ui.js';
 import { rideHTML, rideInfo, rideExpiry } from './ride.js';
 import { settingsHTML } from './settings.js';
 import { pickerHTML, initPicker } from './picker.js';
+import { initNav, ask, overlayOpened, overlayClosed, rideChanged } from './nav.js';
 
 // Datos reales de Renfe; con ?demo se usa la fuente simulada (para ver la interfaz sin red).
 const src = await import(new URLSearchParams(location.search).has('demo') ? './mock.js' : './renfe.js');
@@ -49,6 +50,7 @@ async function init() {
   ui.rideKey = ride ? ride.key : null;
   renderRide();
   renderBoard();
+  rideChanged();
   await refreshAll();
   setInterval(() => { if (!document.hidden) refreshAll(); }, REFRESH_MS);
   setInterval(tick, 1000);
@@ -103,10 +105,16 @@ function renderRide() {
   rideEl.innerHTML = ride ? rideHTML(ride, rideData, Date.now()) : '';
 }
 
+async function endRide() {
+  const ok = await ask({ title: '¿Quitar tu tren?', text: 'Dejarás de ver cuánto te queda para llegar.', ok: 'Quitar', no: 'Mantener' });
+  if (ok) setRide(null);
+  return ok;
+}
+
 function setRide(r) {
   ride = r; rideData = null; store.saveRide(r);
   ui.rideKey = r ? r.key : null;
-  renderRide(); renderBoard(); syncWake();
+  renderRide(); renderBoard(); syncWake(); rideChanged();
   if (r) { refreshRide(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 }
 
@@ -157,10 +165,12 @@ function showSheet(html, side = 'right') {
   sheet.classList.add('is-open'); scrim.classList.add('is-open');
   sheet.setAttribute('aria-hidden', 'false');
   document.body.classList.add('no-scroll');
+  overlayOpened();
 }
 
 function closeSheet() {
   open = null;
+  overlayClosed();
   if (dropPicker) { dropPicker(); dropPicker = null; }
   sheet.classList.remove('is-open'); scrim.classList.remove('is-open');
   sheet.setAttribute('aria-hidden', 'true');
@@ -231,7 +241,7 @@ sheet.addEventListener('click', async ev => {
     return;
   }
   if (ev.target.closest('[data-act=ride-sheet]') && open && open.kind === 'train') {
-    if (ride && ride.key === open.key) { setRide(null); return refreshDetail(); }
+    if (ride && ride.key === open.key) { if (await endRide()) refreshDetail(); return; }
     const d = open.d, a = d.stops[d.iFrom], b = d.stops[d.iTo];
     closeSheet(); setRide(mkRide(a, b, d.train));
   }
@@ -244,7 +254,7 @@ sheet.addEventListener('change', ev => {
 
 rideEl.addEventListener('click', ev => {
   const el = ev.target.closest('[data-act]'); if (!el || !ride) return;
-  if (el.dataset.act === 'ride-end') return setRide(null);
+  if (el.dataset.act === 'ride-end') return endRide();
   if (el.dataset.act === 'ride-open') return openTrain(ride.key, ride.from.id, ride.to.id);
 });
 
@@ -259,7 +269,7 @@ board.addEventListener('click', async ev => {
   if (act === 'train') { const t = trips.find(x => x.id === id); return t && openTrain(el.dataset.key, t.from.id, t.to.id); }
   if (act === 'ride') {
     const key = el.dataset.key;
-    if (ride && ride.key === key) return setRide(null);
+    if (ride && ride.key === key) return endRide();
     const t = trips.find(x => x.id === id), tr = data.get(id) && data.get(id).trains && data.get(id).trains.find(x => x.key === key);
     return t && tr && setRide(mkRide(t.from, t.to, tr));
   }
@@ -293,4 +303,5 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
+initNav({ closeOverlay: closeSheet, hasRide: () => !!ride });
 init();

@@ -89,11 +89,25 @@ async function loadDays(idx, now) {
 const PLAT = /PLATF\.?\s*\((\d+)\)/i;
 let rtCache = { at: 0, p: null };
 
+// Un fallo suelto del proxy (en las pruebas, ~0,5 % de 502) no debe borrar el tiempo real de pantalla:
+// se reintenta una vez y, si sigue fallando, se aprovecha la última respuesta buena si tiene menos de 90 s.
+const lastGood = new Map();
+async function feed(name) {
+  let err;
+  for (let i = 0; i < 2; i++) {
+    try { const j = await getJson('api/rt/' + name, 8000); lastGood.set(name, { at: Date.now(), j }); return j; }
+    catch (e) { err = e; }
+  }
+  const g = lastGood.get(name);
+  if (g && Date.now() - g.at < 90000) return g.j;
+  throw err;
+}
+
 export function realtime() {
   if (rtCache.p && Date.now() - rtCache.at < 8000) return rtCache.p;
   rtCache.at = Date.now();
   rtCache.p = (async () => {
-    const [tu, vp] = await Promise.allSettled([getJson('api/rt/trip_updates'), getJson('api/rt/vehicle_positions')]);
+    const [tu, vp] = await Promise.allSettled([feed('trip_updates'), feed('vehicle_positions')]);
     const out = { ok: tu.status === 'fulfilled' || vp.status === 'fulfilled', updatedAt: null, trips: new Map(), veh: new Map() };
     let ts = 0;
     if (tu.status === 'fulfilled') {

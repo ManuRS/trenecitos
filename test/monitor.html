@@ -142,7 +142,14 @@ async function get(name) {
     inc(n.status, r.status); inc(n.cache, r.headers.get('x-upstream-cache') || '(vacío)');
     if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + trunc(txt, 120));
     const json = JSON.parse(txt);
-    n.ok++; keep(n.ms, Math.round(performance.now() - t0)); keep(n.kb, Math.round(txt.length / 1024));
+    // Transiciones vacío <-> con datos (Renfe a veces publica el feed sin ningún tren aunque la cabecera avance)
+    if (name !== 'alerts') {
+      const empty = !(json.entity && json.entity.length);
+      if (S.feedEmpty && S.feedEmpty[name] !== undefined && S.feedEmpty[name] !== empty)
+        ev('FEED', `${name}: ${empty ? 'VACÍO' : 'CON DATOS'} (${txt.length} bytes, cabecera ${(json.header && json.header.timestamp) || '?'}, x-upstream-cache=${r.headers.get('x-upstream-cache') || '-'}) ${empty ? trunc(txt, 160) : ''}`);
+      (S.feedEmpty || (S.feedEmpty = {}))[name] = empty;
+    }
+    n.ok++; keep(n.ms, Math.round(performance.now() - t0)); keep(n.kb, Math.round(txt.length / 102.4) / 10);
     return json;
   } catch (e) { n.err++; throw e; }
 }
@@ -327,7 +334,7 @@ function report() {
   P(`Horario estático: ${S.staticInfo || '–'}`);
 
   H('RED (proxy /api/rt)');
-  for (const [k, n] of Object.entries(S.net)) P(`${k}: ok=${n.ok} err=${n.err} · latencia ms ${stat(n.ms, x => Math.round(x))} · tamaño KB ${stat(n.kb, x => Math.round(x))} · HTTP ${JSON.stringify(n.status)} · x-upstream-cache ${JSON.stringify(n.cache)}`);
+  for (const [k, n] of Object.entries(S.net)) P(`${k}: ok=${n.ok} err=${n.err} · latencia ms ${stat(n.ms, x => Math.round(x))} · tamaño KB ${stat(n.kb, x => Math.round(x * 10) / 10)} · HTTP ${JSON.stringify(n.status)} · x-upstream-cache ${JSON.stringify(n.cache)}`);
 
   H('FRESCURA');
   for (const k of Object.keys(S.hdrInt)) P(`${k}: header.timestamp cambia cada (s) ${stat(S.hdrInt[k], x => Math.round(x))} · edad al recibir (s) ${stat(S.hdrAge[k] || [], x => Math.round(x))}`);

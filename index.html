@@ -31,6 +31,26 @@
 <div class="scrim" id="scrim"></div>
 <aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-hidden="true" tabindex="-1"></aside>
 
+<dialog class="dlg" id="askDlg" aria-labelledby="askT">
+  <form method="dialog">
+    <h2 id="askT" data-t="title"></h2>
+    <p data-t="text"></p>
+    <div class="dlg__btns">
+      <button class="btn-add" value="no" data-t="no" autofocus></button>
+      <button class="btn-add" value="ok" data-t="ok"></button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="dlg" id="exitDlg" aria-labelledby="exitT">
+  <h2 id="exitT">¿Salir de Trenecitos?</h2>
+  <p>Tienes marcado tu tren. Si sales de la app dejarás de ver cuánto te queda. Mejor minimízala con el botón de inicio y no la cierres.</p>
+  <div class="dlg__btns">
+    <button type="button" class="btn-add" data-t="stay" autofocus>Quedarme</button>
+    <button type="button" class="btn-add btn-add--danger" data-t="leave">Salir</button>
+  </div>
+</dialog>
+
 <footer class="foot">Datos abiertos de Renfe Operadora · CC BY 4.0</footer>
 
 <script type="module" src="src/app.js"></script>
