@@ -43,16 +43,16 @@ svg { display: block; }
 /* ---------- Barra superior ---------- */
 
 .top {
-  position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 52px 1fr 52px; align-items: center;
-  padding-top: calc(18px + env(safe-area-inset-top)); padding-bottom: 18px;
+  position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center;
+  padding-top: calc(13px + env(safe-area-inset-top)); padding-bottom: 13px;
   padding-inline: max(8px, calc(50% - var(--w) / 2 + 8px));
   background: var(--accent); color: #fff; box-shadow: 0 1px 0 rgba(0, 0, 0, .25);
 }
-.brand { display: flex; align-items: center; justify-content: center; gap: 14px; }
-.brand__mark { width: 42px; height: 37px; fill: #fff; }
-.brand h1 { font: 700 36px/1 var(--cond); letter-spacing: .09em; text-transform: uppercase; }
-.hdr-btn { display: grid; place-items: center; width: 52px; height: 48px; border-radius: 3px; color: #fff; }
-.hdr-btn svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.brand { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.brand__mark { width: 29px; height: 25px; fill: #fff; }
+.brand h1 { font: 700 27px/1 var(--cond); letter-spacing: .09em; text-transform: uppercase; }
+.hdr-btn { display: grid; place-items: center; width: 48px; height: 44px; border-radius: 3px; color: #fff; }
+.hdr-btn svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
 .hdr-btn:hover, .hdr-btn:active { background: rgba(0, 0, 0, .18); }
 .top :focus-visible { outline-color: #fff; }
 
