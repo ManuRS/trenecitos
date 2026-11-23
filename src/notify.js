@@ -20,10 +20,8 @@ function text(ride, d, now) {
   const t = d.train, inf = rideInfo(d, now);
   const upd = `Actualizado ${hhmm(d.updatedAt || now)}`;
   if (inf.phase === 'cancelled') return { title: 'Tren cancelado', body: `${route}\n${upd}` };
-  if (inf.phase === 'riding') {
-    const next = inf.left === 1 ? 'Bajas en la siguiente' : `Siguiente: ${inf.next.name}`;
-    return { title: `Llegada ${hhmm(t.estArr)}`, body: `${route}\n${next} · ${upd}` };
-  }
+  // Ya en el tren: solo la llegada (la notificación no se actualiza fuera de la app; la siguiente parada quedaría vieja enseguida)
+  if (inf.phase === 'riding') return { title: `Llegada ${hhmm(t.estArr)}`, body: `${route}\n${upd}` };
   return { title: `Salida ${hhmm(t.estDep)}${t.platform ? ` · Vía ${t.platform}` : ''}`, body: `${route}\nLlegada ${hhmm(t.estArr)} · ${upd}` };
 }
 
