@@ -80,7 +80,8 @@ export async function departures(from, to, now = Date.now(), count = 3) {
   }
   trains.sort((a, b) => a.schedDep - b.schedDep);
   const updatedAt = now - (now % 20000);
-  return { updatedAt, hops: Math.abs(idx(to) - idx(from)), trains: trains.slice(0, count) };
+  const alerts = [{ id: 'demo-1', title: 'Obras entre Villaverde Alto y Getafe Centro', text: 'Posibles retrasos de hasta 10 minutos en ambos sentidos. (Aviso de demostración.)' }];
+  return { updatedAt, hops: Math.abs(idx(to) - idx(from)), trains: trains.slice(0, count), alerts };
 }
 
 export async function detail(key, from, to, now = Date.now()) {

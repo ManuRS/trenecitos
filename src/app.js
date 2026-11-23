@@ -123,7 +123,11 @@ function render() {
   board.className = 'board board--' + v;
   $('add').hidden = v !== 'trips';
   if (v === 'trips') board.innerHTML = tripsViewHTML(trips, trips.length && !store.flag('install') ? inst.state() : '');
-  else if (v === 'pick') board.innerHTML = pickViewHTML(pick, pickData, now);
+  else if (v === 'pick') {
+    const opened = new Set([...board.querySelectorAll('.palert[open]')].map(e => e.dataset.k));   // avisos desplegados: siguen así al refrescar
+    board.innerHTML = pickViewHTML(pick, pickData, now);
+    board.querySelectorAll('.palert').forEach(e => { if (opened.has(e.dataset.k)) e.open = true; });
+  }
   else board.innerHTML = stepHTML(3, 'Tu tren', { action: '<button type="button" class="step__act" data-act="change">Cambiar</button>' })
     + rideHTML(ride, rideData, now)
     + (rideData ? detailBodyHTML(rideData, now) : '');

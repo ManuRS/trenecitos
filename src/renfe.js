@@ -154,6 +154,23 @@ function alerts() {
 }
 const tr = t => { const l = (t && t.translation) || []; return (l.find(x => x.language === 'es') || l[0] || {}).text || ''; };
 
+
+/** Avisos de Renfe que afectan a alguna de estas líneas (route_id) o paradas (stop_id): los 3 más recientes. */
+async function alertsFor(routes, stopIds, now) {
+  const horizon = now / 1000 - 12 * 3600;
+  const seen = new Set();
+  return (await alerts()).map(e => e.alert).filter(Boolean).filter(al => {
+    const p0 = (al.activePeriod || [])[0] || {};
+    if (p0.end && +p0.end < now / 1000) return false;
+    if (p0.start && +p0.start < horizon && !p0.end) return false;
+    return (al.informedEntity || []).some(x => routes.has(x.routeId) || (x.stopId && stopIds.has(String(x.stopId))));
+  }).map(al => ({
+    start: +((al.activePeriod || [])[0] || {}).start || 0,
+    title: tr(al.headerText), text: tr(al.descriptionText).replace(/\s+/g, ' ').trim(),
+  })).filter(x => x.text && !seen.has(x.text) && seen.add(x.text)).sort((x, y) => y.start - x.start).slice(0, 3)
+    .map((x, k) => ({ id: 'a' + k, title: x.title, text: x.text }));
+}
+
 /* ---------- Construcción de trenes ---------- */
 
 const number = tid => { const m = /^\d+[A-Za-z](\d+)/.exec(tid); return m ? m[1] : tid; };
@@ -196,7 +213,7 @@ function trainOf(ctx, day, n, from, to, keepSkipped = false) {
     status: cancelled ? 'cancelled' : veh ? 'running' : 'scheduled',
     hops: j - i, phase,
     platform: vi === i && veh ? veh.platform : null,
-    _passed: vi > i, _vi: vi, skipsEnds,
+    _passed: vi > i, _vi: vi, skipsEnds, _rid: route.id, _seg: pat.stops.slice(i, j + 1),
   };
 }
 
@@ -240,7 +257,11 @@ export async function departures(from, to, now = Date.now(), count = 3) {
     trains.push(t);
     if (t.status !== 'cancelled' && ++live === count) break;
   }
+  // Avisos de las líneas de estos trenes y de las paradas del tramo (las alertas se piden como mucho cada 5 min)
+  const running = trains.filter(t => t.status !== 'cancelled');
+  const alertList = running.length ? await alertsFor(new Set(running.map(t => t._rid)), new Set(running.flatMap(t => t._seg.map(k => ctx.idx.stops[k].id))), now).catch(() => []) : [];
   return {
+    alerts: alertList,
     updatedAt: ctx.rt.updatedAt, rt: ctx.rt.ok && !ctx.rt.empty, rtDown: !ctx.rt.ok,
     hops: trains.length ? trains.find(t => t.status !== 'cancelled')?.hops ?? trains[0].hops : anyHops,
     noDirect: anyHops == null,
@@ -299,19 +320,7 @@ export async function detail(key, from, to, now = Date.now()) {
   else here = { kind: 'sched', text: stops[0].sched > now ? `Aún no ha salido de ${stops[0].name}` : 'Renfe no publica su posición todavía', hereIdx: -1 };
 
   const seg = new Set(pat.stops.slice(iFrom, iTo + 1).map(s => idx.stops[s].id));
-  const route = idx.routes[pat.route];
-  const horizon = now / 1000 - 12 * 3600;
-  const seen = new Set();
-  const list = (await alerts()).map(e => e.alert).filter(Boolean).filter(al => {
-    const p0 = (al.activePeriod || [])[0] || {};
-    if (p0.end && +p0.end < now / 1000) return false;
-    if (p0.start && +p0.start < horizon && !p0.end) return false;
-    return (al.informedEntity || []).some(x => x.routeId === route.id || (x.stopId && seg.has(String(x.stopId))));
-  }).map(al => ({
-    start: +((al.activePeriod || [])[0] || {}).start || 0,
-    title: tr(al.headerText), text: tr(al.descriptionText).replace(/\s+/g, ' ').trim(),
-  })).filter(x => x.text && !seen.has(x.text) && seen.add(x.text)).sort((x, y) => y.start - x.start).slice(0, 3)
-    .map((x, k) => ({ id: 'a' + k, title: x.title, text: x.text }));
+  const list = await alertsFor(new Set([idx.routes[pat.route].id]), seg, now);
 
   return { train, stops, iFrom, iTo, here, lost, vi, vstatus: veh && !cancelled ? veh.status : '', positionAt: veh && !cancelled && veh.ts ? veh.ts : null, alerts: list, updatedAt: rt.updatedAt };
 }

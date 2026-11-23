@@ -450,3 +450,16 @@ svg { display: block; }
 .tr--next .tr__top .badge { top: 3px; }
 .tr__dep s { position: relative; top: 1px; }
 .tr--next .tr__dep s { top: 0; }
+
+/* Paso 2: avisos de Renfe de la línea o del tramo, plegados (tocar para leer) */
+.palerts { border-top: 1px solid var(--rule); }
+.palert { padding: 10px 14px 10px 13px; border-left: 3px solid var(--warn); }
+.palert + .palert { border-top: 1px solid var(--rule); }
+.palert summary {
+  display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none;
+  font: 600 16px/1.2 var(--cond); letter-spacing: .03em; text-transform: uppercase; color: var(--warn);
+}
+.palert summary::-webkit-details-marker { display: none; }
+.palert summary::after { content: '+'; margin-left: auto; flex: none; font: 500 18px/1 var(--mono); color: var(--dim); }
+.palert[open] summary::after { content: '−'; }
+.palert p { margin-top: 6px; font: 400 13px/1.45 system-ui, sans-serif; color: var(--dim); }
