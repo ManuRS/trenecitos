@@ -241,7 +241,7 @@ export async function departures(from, to, now = Date.now(), count = 3) {
     if (t.status !== 'cancelled' && ++live === count) break;
   }
   return {
-    updatedAt: ctx.rt.updatedAt, rt: ctx.rt.ok && !ctx.rt.empty,
+    updatedAt: ctx.rt.updatedAt, rt: ctx.rt.ok && !ctx.rt.empty, rtDown: !ctx.rt.ok,
     hops: trains.length ? trains.find(t => t.status !== 'cancelled')?.hops ?? trains[0].hops : anyHops,
     noDirect: anyHops == null,
     trains,
