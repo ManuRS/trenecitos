@@ -35,6 +35,19 @@ for (const size of [180, 192, 512]) {
   await writeFile(`${dist}/icons/icon-${size}.png`, png);
 }
 await cp(`${dist}/icons/icon-180.png`, `${dist}/icons/apple-touch-icon.png`);
+// En la raíz, como esperan WhatsApp, Telegram y compañía para el icono pequeño de la vista previa (no leen SVG):
+// apple-touch-icon.png y favicon.ico (16, 32 y 48 px; el .ico lleva los PNG dentro).
+await cp(`${dist}/icons/icon-180.png`, `${dist}/apple-touch-icon.png`);
+const icoPngs = [16, 32, 48].map(sz => new Resvg(svg, { fitTo: { mode: 'width', value: sz } }).render().asPng());
+const ico = Buffer.alloc(6 + 16 * icoPngs.length);
+ico.writeUInt16LE(0, 0); ico.writeUInt16LE(1, 2); ico.writeUInt16LE(icoPngs.length, 4);
+let off = ico.length;
+icoPngs.forEach((png, n) => {
+  const sz = [16, 32, 48][n], e = 6 + 16 * n;
+  ico.writeUInt8(sz, e); ico.writeUInt8(sz, e + 1); ico.writeUInt16LE(1, e + 4); ico.writeUInt16LE(32, e + 6);
+  ico.writeUInt32LE(png.length, e + 8); ico.writeUInt32LE(off, e + 12); off += png.length;
+});
+await writeFile(`${dist}/favicon.ico`, Buffer.concat([ico, ...icoPngs]));
 // Icono de la barra de estado para la notificación (Android usa solo la silueta: la marca en blanco sobre transparente)
 const mark = (await readFile('index.html', 'utf8')).match(/class="brand__mark" viewBox="([^"]+)"[^>]*><path fill-rule="evenodd" d="([^"]+)"/);
 const [vx, vy, vw, vh] = mark[1].split(' ').map(Number), side = Math.max(vw, vh) * 1.08;   // cuadrado, con un poco de aire
