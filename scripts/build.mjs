@@ -40,6 +40,9 @@ const mark = (await readFile('index.html', 'utf8')).match(/class="brand__mark" v
 const [vx, vy, vw, vh] = mark[1].split(' ').map(Number), side = Math.max(vw, vh) * 1.08;   // cuadrado, con un poco de aire
 const badge = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx - (side - vw) / 2} ${vy - (side - vh) / 2} ${side} ${side}"><path fill="#fff" fill-rule="evenodd" d="${mark[2]}"/></svg>`;
 await writeFile(`${dist}/icons/badge-96.png`, new Resvg(badge, { fitTo: { mode: 'width', value: 96 } }).render().asPng());
+// Imagen grande de la notificación: Chrome en Android siempre pone una (sin ella dibuja un círculo con la inicial).
+// Una imagen transparente deja ese hueco vacío.
+await writeFile(`${dist}/icons/blank.png`, new Resvg('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"/>').render().asPng());
 // ---------- Horarios ----------
 // Si la descarga o la conversión fallan, el build falla y Cloudflare deja el despliegue anterior en producción.
 let zip;

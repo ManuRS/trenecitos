@@ -35,7 +35,7 @@ export async function show(ride, d, now = Date.now()) {
     const { title, body } = text(ride, d, now);
     await reg.showNotification(title, {
       body, tag: TAG, renotify: false, silent: true,
-      badge: 'icons/badge-96.png', timestamp: d && d.updatedAt ? d.updatedAt : now,
+      badge: 'icons/badge-96.png', icon: 'icons/blank.png', timestamp: d && d.updatedAt ? d.updatedAt : now,
     });
   } catch { /* el navegador puede negarlo */ }
 }
