@@ -25,7 +25,6 @@
 <p class="demo" id="demo" hidden>Datos de demostración · aún sin conectar con Renfe</p>
 
 <div class="scroller" id="scroller">
-<div class="ride-wrap"><div id="ride" hidden></div></div>
 
 <main class="board" id="board" aria-live="off"></main>
 <footer class="foot">Datos abiertos de Renfe Operadora · CC BY 4.0</footer>
@@ -45,14 +44,6 @@
   </form>
 </dialog>
 
-<dialog class="dlg" id="exitDlg" aria-labelledby="exitT">
-  <h2 id="exitT">¿Salir de Trenecitos?</h2>
-  <p>Tienes marcado tu tren. Si sales de la app dejarás de ver cuánto te queda. Mejor minimízala con el botón de inicio y no la cierres.</p>
-  <div class="dlg__btns">
-    <button type="button" class="btn-add" data-t="stay" autofocus>Quedarme</button>
-    <button type="button" class="btn-add btn-add--danger" data-t="leave">Salir</button>
-  </div>
-</dialog>
 
 <script type="module" src="src/app.js"></script>
 </body>

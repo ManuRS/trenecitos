@@ -6,11 +6,13 @@ export const ICON = {
   close: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>',
   check: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>',
   swap: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2v11M2 10l3 3 3-3M11 14V3M8 6l3-3 3 3"/></svg>',
+  back: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>',
+  arrow: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4"/></svg>',
+  grip: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="3.5" r="1.2"/><circle cx="10" cy="3.5" r="1.2"/><circle cx="6" cy="8" r="1.2"/><circle cx="10" cy="8" r="1.2"/><circle cx="6" cy="12.5" r="1.2"/><circle cx="10" cy="12.5" r="1.2"/></svg>',
 };
 
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-/* ---------- Panel de un trayecto ---------- */
+/* ---------- Filas de tren ---------- */
 
 function stateLine(t) {
   if (t.status === 'cancelled') return { cls: 'off', text: 'Cancelado' };
@@ -23,14 +25,13 @@ function stateLine(t) {
   return { cls: d.cls, text: [d.text, phase, via].filter(Boolean).join(' · ') };
 }
 
-function trainRow(t, i, now, ui) {
+function trainRow(t, i, now) {
   const e = etaParts(t.estDep, now);
   const changed = t.status !== 'cancelled' && hhmm(t.schedDep) !== hhmm(t.estDep);
   const st = stateLine(t);
   const live = t.status !== 'cancelled';
-  const mine = ui.rideKey === t.key;
-  return `<div class="tr${i === 0 ? ' tr--next' : ''}${live ? ' tr--pin' : ' tr--off'}${mine ? ' tr--mine' : ''}">
-    <button type="button" class="tr__open" data-act="train" data-key="${esc(t.key)}">
+  return `<div class="tr${i === 0 ? ' tr--next' : ''}${live ? '' : ' tr--off'}">
+    <button type="button" class="tr__open" data-act="pick" data-key="${esc(t.key)}"${live ? '' : ' disabled'}>
       ${badge(t.line)}
       <span class="tr__main">
         <span class="tr__dep">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${hhmm(t.estDep)}</span>
@@ -42,7 +43,6 @@ function trainRow(t, i, now, ui) {
         : '<span class="tr__eta"><b>—</b></span>'}
       <span class="tr__state tr__state--${st.cls}">${esc(st.text)}</span>
     </button>
-    ${live ? `<button type="button" class="tr__pin${mine ? ' is-on' : ''}" data-act="ride" data-key="${esc(t.key)}" aria-pressed="${mine}">${mine ? ICON.check + 'Mi tren' : 'Es mi tren'}</button>` : ''}
   </div>`;
 }
 
@@ -55,49 +55,62 @@ function routeTone(d) {
   return c === 'ok' || c === 'early' ? 'ok' : c === 'late' ? 'late' : 'none';
 }
 
-export function panelHTML(trip, d, ui, now) {
-  const menu = ui.menu === trip.id;
-  const confirm = ui.confirm === trip.id;
-  let body;
-  if (!d) body = '<p class="note">Cargando trenes…</p>';
-  else if (d.error) body = `<p class="note note--bad">${d.reason === 'stale' ? 'Los horarios guardados no incluyen hoy. Recarga la página en un rato.' : d.reason === 'station' ? 'Una de las estaciones ya no existe en los horarios de Renfe. Quita el trayecto y vuelve a crearlo.' : 'No se han podido cargar los horarios de Renfe.'}</p>`;
-  else if (d.noDirect) body = '<p class="note">No hay tren directo entre estas dos estaciones. Hará falta un transbordo.</p>';
-  else if (!d.trains.length) body = '<p class="note">No hay trenes en las próximas horas.</p>';
-  else body = d.trains.map((t, i) => trainRow(t, i, now, ui)).join('');
+/** Cabecera de cada paso: número, título y, si toca, un botón a la izquierda (volver) o a la derecha (acción). */
+export const stepHTML = (n, title, { back = false, action = '' } = {}) => `<div class="step">
+    ${back ? `<button type="button" class="step__back" data-act="back" aria-label="Volver">${ICON.back}</button>` : ''}
+    <b class="step__n">${n}</b><h2 class="step__t">${title}</h2>${action}
+  </div>`;
 
-  return `<article class="panel" data-trip="${esc(trip.id)}">
-    <header class="panel__head">
-      <div class="route route--${routeTone(d)}">
-        <div class="route__row"><i class="route__dot"></i><span class="route__name">${esc(trip.from.name)}</span></div>
-        <div class="route__row"><i class="route__dot route__dot--end"></i><span class="route__name">${esc(trip.to.name)}</span></div>
-      </div>
-      <button type="button" class="icon-btn" data-act="menu" aria-label="Opciones del trayecto" aria-expanded="${menu}">${ICON.dots}</button>
-    </header>
-    ${menu ? `<div class="panel__menu">
-      <button type="button" data-act="reverse">${ICON.swap}Invertir trayecto</button>
-      <button type="button" class="danger" data-act="remove">${confirm ? 'Pulsa otra vez para quitar' : 'Quitar'}</button>
-    </div>` : ''}
-    <div class="trains">${body}</div>
-    <footer class="panel__foot"><span data-upd="${d && d.updatedAt ? d.updatedAt : ''}">${!d || d.error ? '' : d.updatedAt ? 'Renfe · actualizado ' + hhmmss(d.updatedAt) : d.rt === false ? 'Renfe no publica tiempo real ahora · horarios teóricos' : ''}</span></footer>
-  </article>`;
+/* ---------- Paso 1: tus viajes ---------- */
+
+const dirBtn = (trip, dir) => {
+  const [a, b] = dir ? [trip.to, trip.from] : [trip.from, trip.to];
+  return `<button type="button" class="fav__go" data-act="go" data-dir="${dir}">
+      <span class="fav__a">${esc(a.name)}</span><span class="fav__to" aria-label="a">${ICON.arrow}</span><span class="fav__b">${esc(b.name)}</span>
+    </button>`;
+};
+
+export function tripsViewHTML(trips) {
+  if (!trips.length) return `<section class="empty">
+    <p class="empty__title">Sin viajes</p>
+    <p>Añade el trayecto que haces a diario. Luego eliges el sentido y el tren.</p>
+    <button type="button" class="btn-add btn-add--big" data-act="add">Añadir viaje</button>
+  </section>`;
+  return stepHTML(1, '¿Cuál es tu viaje?') + `<div class="favs">${trips.map(t => `<article class="fav" data-trip="${esc(t.id)}">
+      <button type="button" class="fav__grip" aria-label="Mover" title="Arrastra para ordenar">${ICON.grip}</button>
+      <div class="fav__dirs">${dirBtn(t, 0)}${dirBtn(t, 1)}</div>
+      <button type="button" class="icon-btn fav__rm" data-act="remove" aria-label="Quitar viaje">${ICON.close}</button>
+    </article>`).join('')}</div>`;
 }
 
-export function emptyHTML() {
-  return `<section class="empty">
-    <p class="empty__title">Sin trayectos</p>
-    <p>Añade tu primer trayecto y verás de un vistazo cuánto falta para el siguiente tren.</p>
-    <button type="button" class="btn-add btn-add--big" data-act="add">Añadir trayecto</button>
-  </section>`;
+/* ---------- Paso 2: elige tu tren ---------- */
+
+export function pickViewHTML(p, d, now) {
+  let body;
+  if (!d) body = '<p class="note">Cargando trenes…</p>';
+  else if (d.error) body = `<p class="note note--bad">${d.reason === 'stale' ? 'Los horarios guardados no incluyen hoy. Recarga la página en un rato.' : d.reason === 'station' ? 'Una de las estaciones ya no existe en los horarios de Renfe. Quita el viaje y vuelve a crearlo.' : 'No se han podido cargar los horarios de Renfe.'}</p>`;
+  else if (d.noDirect) body = '<p class="note">No hay tren directo entre estas dos estaciones. Hará falta un transbordo.</p>';
+  else if (!d.trains.length) body = '<p class="note">No hay trenes en las próximas horas.</p>';
+  else body = d.trains.map((t, i) => trainRow(t, i, now)).join('');
+
+  return stepHTML(2, 'Elige tu tren', { back: true }) + `<article class="panel">
+    <header class="panel__head">
+      <div class="route route--${routeTone(d)}">
+        <div class="route__row"><i class="route__dot"></i><span class="route__name">${esc(p.from.name)}</span></div>
+        <div class="route__row"><i class="route__dot route__dot--end"></i><span class="route__name">${esc(p.to.name)}</span></div>
+      </div>
+    </header>
+    <div class="trains">${body}</div>
+    <footer class="panel__foot"><span>${!d || d.error ? '' : d.updatedAt ? 'Renfe · actualizado ' + hhmmss(d.updatedAt) : d.rt === false ? 'Renfe no publica tiempo real ahora · horarios teóricos' : ''}</span></footer>
+  </article>`;
 }
 
 /* ---------- Detalle de un tren ---------- */
 
-export function detailHTML(d, now, isRide = false) {
+/** Paso 3, debajo de la tarjeta: dónde va el tren, su recorrido y los avisos de Renfe. */
+export function detailBodyHTML(d, now) {
   const t = d.train;
-  const e = etaParts(t.estDep, now);
-  const dl = delayInfo(t.delay);
   const first = d.stops[0].name, last = d.stops[d.stops.length - 1].name;
-  const changed = t.status !== 'cancelled' && hhmm(t.schedDep) !== hhmm(t.estDep);
 
   const stops = d.stops.map((s, n) => {
     const inSeg = n >= d.iFrom && n <= d.iTo;
@@ -113,52 +126,28 @@ export function detailHTML(d, now, isRide = false) {
     </li>`;
   }).join('');
 
-  const nowLine = d.here.kind === 'cancelled'
-    ? `<p class="now__text now__text--bad">Tren cancelado</p>`
-    : `<p class="now__text">${esc(d.here.text)}</p>
-       <p class="now__meta">${[
-          d.here.platform ? `vía ${d.here.platform}` : '',
-          d.here.state || '',
-          d.positionAt ? `posición ${ago(d.positionAt, now)}` : 'sin posición: horas según horario',
-        ].filter(Boolean).join(' · ')}</p>`;
+  const nowLine = d.here.kind === 'cancelled' ? '' : `<section class="now">
+      <h3>Ahora</h3>
+      <p class="now__text">${esc(d.here.text)}</p>
+      <p class="now__meta">${[
+        d.here.platform ? `vía ${d.here.platform}` : '',
+        d.here.state || '',
+        d.positionAt ? `posición ${ago(d.positionAt, now)}` : 'sin posición: horas según horario',
+      ].filter(Boolean).join(' · ')}</p>
+    </section>`;
 
-  return `<div class="sheet__bar">
-      <button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">${ICON.close}</button>
-      <span class="sheet__kicker">Tren ${esc(t.number)}</span>
-    </div>
-    <div class="sheet__scroll">
-      <div class="dhead">
-        ${badge(t.line)}
-        <p class="dhead__run">${esc(first)} <span>a</span> ${esc(last)}</p>
-      </div>
-
-      <div class="hero">
-        <div class="hero__time">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${t.status === 'cancelled' ? hhmm(t.schedDep) : hhmm(t.estDep)}</div>
-        ${t.status === 'cancelled' ? '' : `<div class="hero__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${t.estDep}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</div>`}
-      </div>
-      <p class="hero__sub">sale de ${esc(d.stops[d.iFrom].name)} · llega a ${esc(d.stops[d.iTo].name)} a las ${hhmm(t.status === 'cancelled' ? t.schedArr : t.estArr)}</p>
-
+  return `<div class="more">
       ${t.skipsEnds ? `<p class="note note--bad note--box">Atención: según Renfe, este tren no para en ${esc(d.stops[d.iFrom].skipped ? d.stops[d.iFrom].name : d.stops[d.iTo].name)}.</p>` : ''}
-      <section class="now">
-        <h3>Ahora</h3>
-        ${nowLine}
-      </section>
-
-      <section class="kv">
-        <div><h3>Retraso</h3><p class="kv__v kv__v--${dl.cls}">${t.delay == null ? '—' : esc(dl.short)}</p></div>
-        <div><h3>Paradas</h3><p class="kv__v">${plural(t.hops, 'parada', 'paradas')}</p></div>
-      </section>
-      <p class="fine">Renfe publica un único retraso por tren, no uno por parada: las horas estimadas son el horario más ese retraso.</p>
-
+      ${nowLine}
       <section>
-        <h3>Recorrido</h3>
+        <h3>Recorrido · tren ${esc(t.number)}</h3>
+        <p class="more__run">${esc(first)} <span>a</span> ${esc(last)}</p>
         <ol class="stops">${stops}</ol>
       </section>
-
       ${d.alerts.length ? `<section>
         <h3>Avisos de Renfe</h3>
         ${d.alerts.map(a => `<div class="alert">${a.title ? `<p class="alert__t">${esc(a.title)}</p>` : ''}<p>${esc(a.text)}</p></div>`).join('')}
       </section>` : ''}
-    </div>
-    ${t.status === 'cancelled' ? '' : `<div class="sheet__foot"><button type="button" class="btn-add btn-add--big${isRide ? ' is-on' : ''}" data-act="ride-sheet">${isRide ? ICON.check + 'Mi tren · quitar' : 'Este es mi tren'}</button></div>`}`;
+      <p class="fine">Renfe publica un único retraso por tren: las horas estimadas son el horario más ese retraso.</p>
+    </div>`;
 }

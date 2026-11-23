@@ -89,17 +89,17 @@ async function loadDays(idx, now) {
 const PLAT = /PLATF\.?\s*\((\d+)\)/i;
 let rtCache = { at: 0, p: null };
 
+// Los dos feeds llegan juntos en /api/live (una sola invocación de la Function por refresco).
 // Un fallo suelto del proxy (en las pruebas, ~0,5 % de 502) no debe borrar el tiempo real de pantalla:
 // se reintenta una vez y, si sigue fallando, se aprovecha la última respuesta buena si tiene menos de 90 s.
-const lastGood = new Map();
-async function feed(name) {
+let lastGood = null;
+async function live() {
   let err;
   for (let i = 0; i < 2; i++) {
-    try { const j = await getJson('api/rt/' + name, 8000); lastGood.set(name, { at: Date.now(), j }); return j; }
+    try { const j = await getJson('api/live', 9000); lastGood = { at: Date.now(), j }; return j; }
     catch (e) { err = e; }
   }
-  const g = lastGood.get(name);
-  if (g && Date.now() - g.at < 90000) return g.j;
+  if (lastGood && Date.now() - lastGood.at < 90000) return lastGood.j;
   throw err;
 }
 
@@ -107,7 +107,10 @@ export function realtime() {
   if (rtCache.p && Date.now() - rtCache.at < 8000) return rtCache.p;
   rtCache.at = Date.now();
   rtCache.p = (async () => {
-    const [tu, vp] = await Promise.allSettled([feed('trip_updates'), feed('vehicle_positions')]);
+    let j = null;
+    try { j = await live(); } catch { /* sin tiempo real */ }
+    const ok = v => v ? { status: 'fulfilled', value: v } : { status: 'rejected' };
+    const tu = ok(j && j.trip_updates), vp = ok(j && j.vehicle_positions);
     const out = { ok: tu.status === 'fulfilled' || vp.status === 'fulfilled', updatedAt: null, trips: new Map(), veh: new Map() };
     let ts = 0;
     if (tu.status === 'fulfilled') {
@@ -143,7 +146,8 @@ export function realtime() {
 
 let alertCache = { at: 0, p: null };
 function alerts() {
-  if (alertCache.p && Date.now() - alertCache.at < 60000) return alertCache.p;
+  if (alertCache.p && Date.now() - alertCache.at < 300000)   // Renfe las renueva cada ~5 min
+  return alertCache.p;
   alertCache.at = Date.now();
   alertCache.p = getJson('api/rt/alerts').then(j => j.entity || []).catch(() => []);
   return alertCache.p;

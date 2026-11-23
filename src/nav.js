@@ -1,30 +1,23 @@
 // Navegación: el botón (o gesto) de "atrás" y las ventanas de confirmación.
 //
-//  · Con un panel abierto (buscador, ajustes, detalle de un tren), atrás cierra el panel y deja en la pantalla principal.
-//  · Con "mi tren" marcado, atrás desde la pantalla principal NO saca de la app: pregunta antes. Lo que buscamos es que
-//    el usuario minimice la app y no la cierre, para no perder el código en marcha (avisos futuros, bloqueo de pantalla…).
-//  · Sin tren marcado, atrás sigue su camino sin preguntar.
+// La app va por pasos (1 tu viaje → 2 elige tren → 3 tu tren) y encima puede haber un panel (buscador, ajustes).
+// Mientras no estés en el paso 1 sin nada abierto, atrás NO sale de la app: retrocede un nivel (app.js decide cómo;
+// del paso 3 al 2 pide confirmación). En el paso 1, atrás sale con normalidad.
 //
-// Mismo planteamiento que backguard.js de radio_web_neo. En móviles táctiles con CloseWatcher (Chrome/Android) el navegador
-// avisa del gesto sin tocar el historial, así Android no anima la "vista previa" de la página anterior. Sin CloseWatcher
-// (PC, iOS, Firefox) se añaden entradas propias al historial y se actúa al volver de ellas.
+// Mismo planteamiento que backguard.js de radio_web_neo. En móviles táctiles con CloseWatcher (Chrome/Android) el
+// navegador avisa del gesto sin tocar el historial; sin CloseWatcher (PC, iOS, Firefox) se usa una entrada propia
+// en el historial y se actúa al volver de ella.
 
 const COARSE = matchMedia('(pointer: coarse)').matches;
 const useWatcher = COARSE && 'CloseWatcher' in window;
 
-let cfg = { closeOverlay() {}, hasRide: () => false };
-let exitDlg = null;
-let ow = null;                // CloseWatcher del panel abierto
-let sheetEntry = false;       // entrada de historial del panel abierto (sin CloseWatcher)
-let hw = null;                // CloseWatcher de la pantalla principal (con tren marcado)
-let hEntry = false;           // entrada de historial de guarda de la pantalla principal
-let dlgW = null;              // CloseWatcher de la ventana de salida
+let cfg = { depth: () => 0, back: async () => {}, hasRide: () => false };
+let watcher = null;           // CloseWatcher activo
+let entry = false;            // entrada propia en el historial (sin CloseWatcher)
 let ignore = 0;               // popstate provocados por nosotros mismos
-let leaving = false;
+let busy = false;             // atendiendo un "atrás"
 
 const openDialog = d => { if (typeof d.showModal === 'function') { if (!d.open) d.showModal(); } else d.setAttribute('open', ''); };
-const closeDialog = d => { if (typeof d.close === 'function') { if (d.open) d.close(); } else d.removeAttribute('open'); };
-const anyDialog = () => document.querySelector('dialog[open]');
 
 /* ---------- Aviso breve ---------- */
 
@@ -35,7 +28,7 @@ export function toast(msg, ms = 4000) {
   clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, ms);
 }
 
-/* ---------- Confirmación genérica ---------- */
+/* ---------- Confirmación ---------- */
 
 /** Pregunta con dos botones. Devuelve true si se confirma; atrás/Escape/fuera cuentan como cancelar. */
 export function ask({ title, text, ok, no = 'Cancelar', danger = true }) {
@@ -52,106 +45,48 @@ export function ask({ title, text, ok, no = 'Cancelar', danger = true }) {
   });
 }
 
-/* ---------- Panel abierto: atrás lo cierra ---------- */
+/* ---------- Guarda de "atrás" ---------- */
 
-export function overlayOpened() {
+function arm() {
   if (useWatcher) {
-    if (ow) return;
+    if (watcher) return;
     const w = new CloseWatcher();
-    ow = w;
-    w.addEventListener('close', () => { if (ow === w) ow = null; cfg.closeOverlay(); });
-  } else if (!sheetEntry) {
-    history.pushState({ tc: 'sheet' }, '');
-    sheetEntry = true;
+    watcher = w;
+    w.addEventListener('close', () => { if (watcher !== w) return; watcher = null; onBack(); });
+  } else if (!entry) {
+    history.pushState({ tc: 1 }, '');
+    entry = true;
   }
 }
 
-/** El panel se ha cerrado por otro camino (cruz, fuera, Escape…): se retira la entrada o el vigilante. */
-export function overlayClosed() {
-  if (useWatcher) { if (ow) { const w = ow; ow = null; w.destroy(); } return; }
-  if (!sheetEntry) return;
-  sheetEntry = false;
-  if (history.state && history.state.tc === 'sheet') { ignore++; history.back(); }
+function disarm() {
+  if (watcher) { const w = watcher; watcher = null; w.destroy(); }
+  if (entry) { entry = false; if (history.state && history.state.tc) { ignore++; history.back(); } }
 }
 
-/* ---------- Pantalla principal con "mi tren": atrás pregunta ---------- */
+/** Llamar tras cada cambio de pantalla: arma o retira la guarda según haya o no niveles por encima del paso 1. */
+export function sync() { if (busy) return; if (cfg.depth() > 0) arm(); else disarm(); }
 
-function armGuard() {
-  if (leaving || !cfg.hasRide()) return;
-  if (useWatcher) {
-    if (hw) return;
-    const w = new CloseWatcher();
-    hw = w;
-    // Primer atrás: se cancela y se pregunta. Chrome solo permite cancelar si se ha tocado la página; si no, salta "close" para no atrapar a nadie.
-    w.addEventListener('cancel', e => {
-      if (!e.cancelable) return;
-      e.preventDefault(); w.destroy(); hw = null;
-      if (cfg.hasRide()) showExit(); 
-    });
-    w.addEventListener('close', () => { hw = null; if (!leaving) history.back(); });
-  } else if (!hEntry) {
-    history.pushState({ tc: 'guard' }, '');
-    hEntry = true;
-  }
+async function onBack() {
+  sync();          // se rearma ya: si app.js pregunta algo, otro "atrás" no debe sacar de la app
+  busy = true;
+  try { await cfg.back(); } finally { busy = false; }
+  sync();
 }
-function disarmGuard() {
-  if (hw) { hw.destroy(); hw = null; }
-  if (hEntry && history.state && history.state.tc === 'guard') { hEntry = false; ignore++; history.back(); }
-  // si hay un panel encima de la entrada, se queda: al llegar a ella con el tren ya quitado, se deja pasar
-}
-
-/** Llamar cuando se marca o se quita "mi tren". */
-export function rideChanged() { if (cfg.hasRide()) armGuard(); else disarmGuard(); }
-
-function showExit() {
-  openDialog(exitDlg);
-  if (!useWatcher || dlgW) return;
-  const d = new CloseWatcher();
-  dlgW = d;
-  d.addEventListener('close', () => { dlgW = null; stay(); });   // atrás con la ventana abierta = seguir en la app
-}
-function stay() { closeDialog(exitDlg); armGuard(); }
-
-function leave() {
-  if (leaving) return;
-  leaving = true;
-  closeDialog(exitDlg);
-  history.go(hEntry ? -2 : -1);
-  // Una app instalada o una pestaña sin página anterior no se puede cerrar desde la web: se intenta y, si sigue aquí, se avisa.
-  setTimeout(() => {
-    try { window.close(); } catch { /* nada */ }
-    setTimeout(() => {
-      leaving = false;
-      if (document.visibilityState === 'visible') { toast(COARSE ? 'Ya puedes salir de la app. Tu tren sigue marcado.' : 'Ya puedes cerrar la pestaña. Tu tren sigue marcado.'); armGuard(); }
-    }, 250);
-  }, 300);
-}
-
-/* ---------- Arranque ---------- */
 
 export function initNav(c) {
   cfg = c;
-  exitDlg = document.getElementById('exitDlg');
-  exitDlg.querySelector('[data-t=stay]').addEventListener('click', stay);
-  exitDlg.querySelector('[data-t=leave]').addEventListener('click', leave);
-  exitDlg.addEventListener('cancel', e => { e.preventDefault(); stay(); });
-  exitDlg.addEventListener('close', () => { if (dlgW) { dlgW.destroy(); dlgW = null; } if (!leaving) armGuard(); });
-
   window.addEventListener('popstate', e => {
     if (ignore > 0) { ignore--; return; }
-    if (sheetEntry && !(e.state && e.state.tc === 'sheet')) { sheetEntry = false; cfg.closeOverlay(); return; }   // atrás cierra el panel
-    if (hEntry && !(e.state && e.state.tc === 'guard') && !sheetEntry) {
-      hEntry = false;
-      if (leaving) return;
-      if (!cfg.hasRide()) { history.back(); return; }          // sin tren marcado, el atrás sigue su camino
-      const d = anyDialog();
-      if (d === exitDlg) stay(); else if (d) { closeDialog(d); armGuard(); } else { showExit(); armGuard(); }
-    }
+    if (!entry || (e.state && e.state.tc)) return;
+    entry = false;
+    const d = document.querySelector('dialog[open]');   // atrás con una pregunta abierta = cancelar
+    if (d) { d.close(); sync(); return; }
+    onBack();
   });
-
-  // Cerrar o recargar la pestaña con tren marcado: aviso del propio navegador (en PC; en el móvil no aplica)
-  window.addEventListener('beforeunload', e => { if (cfg.hasRide() && !leaving) { e.preventDefault(); e.returnValue = ''; } });
-
-  // El navegador solo respeta lo que se crea tras tocar la página: si al abrir ya había un tren marcado, se arma también en el primer toque.
-  addEventListener('pointerdown', () => armGuard(), { once: true, capture: true });
+  // Cerrar o recargar la pestaña siguiendo un tren: aviso del propio navegador (en PC; en el móvil no aplica)
+  window.addEventListener('beforeunload', e => { if (cfg.hasRide()) { e.preventDefault(); e.returnValue = ''; } });
+  // El navegador solo respeta del todo lo creado tras tocar la página: se rehace la guarda en el primer toque.
+  addEventListener('pointerdown', () => { if (watcher) { const w = watcher; watcher = null; w.destroy(); } sync(); }, { once: true, capture: true });
+  sync();
 }

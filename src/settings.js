@@ -22,9 +22,9 @@ export function settingsHTML(s, info, wipeAsk) {
     </div>
     <div class="sheet__scroll">
       <section>
-        <h3>Trenes por trayecto</h3>
-        <div class="seg" role="group" aria-label="Trenes por trayecto">
-          ${[2, 3, 4, 5].map(n => `<button type="button" data-count="${n}" aria-pressed="${s.count === n}" class="${s.count === n ? 'is-on' : ''}">${n}</button>`).join('')}
+        <h3>Trenes para elegir</h3>
+        <div class="seg seg--2" role="group" aria-label="Trenes para elegir">
+          ${[2, 3].map(n => `<button type="button" data-count="${n}" aria-pressed="${s.count === n}" class="${s.count === n ? 'is-on' : ''}">${n}</button>`).join('')}
         </div>
       </section>
       <section>

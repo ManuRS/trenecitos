@@ -29,20 +29,16 @@ export const rideExpiry = (ride, d) => (d ? d.train.estArr : ride.schedArr) + (d
 const cell = (k, v, cls = '', wide = false) => `<div class="ride__c${wide ? ' ride__c--wide' : ''}"><span>${k}</span><b${cls ? ` class="${cls}"` : ''}>${v}</b></div>`;
 
 export function rideHTML(ride, d, now) {
-  const head = `<div class="ride__bar">
-      <span class="ride__tag"><i></i>Mi tren</span>
-      <button type="button" class="icon-btn" data-act="ride-end" aria-label="Quitar mi tren"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
-    </div>`;
   const who = `${badge(ride.line)}<span class="ride__run">${esc(ride.from.name)} <span>a</span> ${esc(ride.to.name)}</span>`;
 
-  if (!d) return `<section class="ride">${head}<div class="ride__body"><div class="ride__who">${who}</div><p class="ride__sub">Cargando…</p></div></section>`;
+  if (!d) return `<section class="ride"><div class="ride__body"><div class="ride__who">${who}</div><p class="ride__sub">Cargando…</p></div></section>`;
 
   const t = d.train, info = rideInfo(d, now), dl = delayInfo(t.delay);
   let main, sub = '', cells = '', prog = '', waiting3 = false;
 
   if (info.phase === 'cancelled') {
     main = '<p class="ride__big ride__big--bad">Tren cancelado</p>';
-    sub = `<p class="ride__sub">Salía a las ${hhmm(t.schedDep)}. Mira el resto de trenes de tu trayecto.</p>`;
+    sub = `<p class="ride__sub">Salía a las ${hhmm(t.schedDep)}. Elige otro tren.</p>`;
   } else if (info.phase === 'arrived') {
     main = '<p class="ride__big">Has llegado</p>';
     sub = `<p class="ride__sub">a ${esc(ride.to.name)} · ${hhmm(t.estArr)}</p>`;
@@ -71,11 +67,11 @@ export function rideHTML(ride, d, now) {
             + cell('Retraso', t.delay == null ? '—' : esc(dl.short), `kv--${dl.cls}`);
     }
   }
-  return `<section class="ride ride--${info.phase}">${head}
-    <button type="button" class="ride__body" data-act="ride-open">
-      <span class="ride__who">${who}</span>
+  return `<section class="ride ride--${info.phase}">
+    <div class="ride__body">
+      <div class="ride__who">${who}</div>
       ${main}${sub}${prog}
       ${cells ? `<div class="ride__cells${waiting3 ? ' ride__cells--3' : ''}">${cells}</div>` : ''}
-    </button>
+    </div>
   </section>`;
 }
