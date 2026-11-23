@@ -32,12 +32,9 @@ function trainRow(t, i, now) {
   const live = t.status !== 'cancelled';
   return `<div class="tr${i === 0 ? ' tr--next' : ''}${live ? '' : ' tr--off'}">
     <button type="button" class="tr__open" data-act="pick" data-key="${esc(t.key)}"${live ? '' : ' disabled'}>
-      ${badge(t.line)}
-      <span class="tr__main">
-        <span class="tr__dep">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${hhmm(t.estDep)}</span>
-        <span class="tr__arr">Llega a las <b>${hhmm(t.estArr)}</b></span>
-        <span class="tr__sub">${dayTag(t.estDep, now) ? `<b class="tr__day">${dayTag(t.estDep, now)}</b> · ` : ''}Tren sentido ${esc(t.headsign)}</span>
-      </span>
+      <span class="tr__top">${badge(t.line)}<span class="tr__dep">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${hhmm(t.estDep)}</span></span>
+      <span class="tr__arr">Llega a las <b>${hhmm(t.estArr)}</b></span>
+      <span class="tr__sub">${dayTag(t.estDep, now) ? `<b class="tr__day">${dayTag(t.estDep, now)}</b> · ` : ''}Tren sentido ${esc(t.headsign)}</span>
       ${live
         ? `<span class="tr__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${t.estDep}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</span>`
         : '<span class="tr__eta"><b>—</b></span>'}

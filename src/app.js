@@ -51,7 +51,7 @@ async function init() {
   }
   else if (src.DEMO) {                 // solo en modo demostración: dos viajes de ejemplo
     const by = id => stationList.find(s => s.id === id);
-    trips = [['17004', '18002'], ['d08', 'd10']].map(([a, b]) => ({ id: uid(), from: by(a), to: by(b) }));
+    trips = [['d07', 'd11'], ['d05', 'd08']].map(([a, b]) => ({ id: uid(), from: by(a), to: by(b) }));
     store.save(trips);
   }
   $('demo').hidden = !src.DEMO;

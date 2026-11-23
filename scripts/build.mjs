@@ -35,6 +35,11 @@ for (const size of [180, 192, 512]) {
   await writeFile(`${dist}/icons/icon-${size}.png`, png);
 }
 await cp(`${dist}/icons/icon-180.png`, `${dist}/icons/apple-touch-icon.png`);
+// Icono de la barra de estado para la notificación (Android usa solo la silueta: la marca en blanco sobre transparente)
+const mark = (await readFile('index.html', 'utf8')).match(/class="brand__mark" viewBox="([^"]+)"[^>]*><path fill-rule="evenodd" d="([^"]+)"/);
+const [vx, vy, vw, vh] = mark[1].split(' ').map(Number), side = Math.max(vw, vh) * 1.08;   // cuadrado, con un poco de aire
+const badge = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx - (side - vw) / 2} ${vy - (side - vh) / 2} ${side} ${side}"><path fill="#fff" fill-rule="evenodd" d="${mark[2]}"/></svg>`;
+await writeFile(`${dist}/icons/badge-96.png`, new Resvg(badge, { fitTo: { mode: 'width', value: 96 } }).render().asPng());
 // ---------- Horarios ----------
 // Si la descarga o la conversión fallan, el build falla y Cloudflare deja el despliegue anterior en producción.
 let zip;

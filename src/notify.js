@@ -13,19 +13,19 @@ export function askPermission() {
   if (ok() && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
 }
 
+// Textos cortos: título con lo esencial; debajo, el trayecto, la llegada y la hora de los datos, cada cosa en su línea.
 function text(ride, d, now) {
-  const head = `${ride.from.name} → ${ride.to.name}`;
-  if (!d) return { title: `Tu tren de las ${hhmm(ride.schedDep)}`, body: head };
+  const route = `${ride.from.name} → ${ride.to.name}`;
+  if (!d) return { title: `Salida ${hhmm(ride.schedDep)}`, body: route };
   const t = d.train, inf = rideInfo(d, now);
-  const upd = `Actualizado a las ${hhmm(d.updatedAt || now)}`;
+  const upd = `Actualizado ${hhmm(d.updatedAt || now)}`;
   const late = t.delay >= 60 ? ` · retraso ${Math.round(t.delay / 60)} min` : '';
-  if (inf.phase === 'cancelled') return { title: 'Tu tren está cancelado', body: `${head}\n${upd}` };
+  if (inf.phase === 'cancelled') return { title: 'Tren cancelado', body: `${route}\n${upd}` };
   if (inf.phase === 'riding') {
     const next = inf.left === 1 ? 'Bajas en la siguiente' : `Siguiente: ${inf.next.name}`;
-    return { title: `Llegas a las ${hhmm(t.estArr)}${late}`, body: `${next}\n${upd}` };
+    return { title: `Llegada ${hhmm(t.estArr)}${late}`, body: `${route}\n${next}\n${upd}` };
   }
-  const via = t.platform ? ` · vía ${t.platform}` : '';
-  return { title: `Tu tren sale a las ${hhmm(t.estDep)}${via}${late}`, body: `${head} · llegas a las ${hhmm(t.estArr)}\n${upd}` };
+  return { title: `Salida ${hhmm(t.estDep)}${t.platform ? ` · Vía ${t.platform}` : ''}`, body: `${route}\nLlegada ${hhmm(t.estArr)}${late}\n${upd}` };
 }
 
 export async function show(ride, d, now = Date.now()) {
@@ -35,7 +35,7 @@ export async function show(ride, d, now = Date.now()) {
     const { title, body } = text(ride, d, now);
     await reg.showNotification(title, {
       body, tag: TAG, renotify: false, silent: true,
-      icon: 'icons/icon-192.png', timestamp: d && d.updatedAt ? d.updatedAt : now,
+      badge: 'icons/badge-96.png', timestamp: d && d.updatedAt ? d.updatedAt : now,
     });
   } catch { /* el navegador puede negarlo */ }
 }

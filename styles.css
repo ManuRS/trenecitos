@@ -427,3 +427,18 @@ svg { display: block; }
 .hint p { flex: 1; font: 400 13px/1.35 var(--mono); }
 .hint .btn-add { flex: none; }
 .hint .icon-btn { flex: none; margin: 0; }
+
+/* Paso 2: fila de tren alineada a un solo borde. Arriba línea + salida; debajo llegada, sentido y estado; a la derecha la cuenta atrás. */
+.tr__open {
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "top eta" "arr eta" "sub sub" "st st";
+  column-gap: 12px; row-gap: 0; align-items: center; padding: 14px 16px;
+}
+.tr__top { grid-area: top; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.tr__top .badge { margin: 0; }
+.tr__arr { grid-area: arr; margin-top: 6px; }
+.tr__sub { grid-area: sub; margin-top: 8px; }
+.tr__eta { grid-area: eta; align-self: center; }
+.tr__state { grid-area: st; margin-top: 8px; }
+.tr--next .tr__open { padding-top: 16px; padding-bottom: 16px; }
+.tr--next .badge { margin: 0; }
+.tr__top .badge, .tr--next .tr__top .badge { margin-top: 4px; }

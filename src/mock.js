@@ -2,17 +2,17 @@
 //   stations()                      -> [{ id, name }]
 //   departures(from, to, now)       -> { updatedAt, hops, trains: [Train] }
 //   detail(key, from, to, now)      -> { train, stops, here, alerts, updatedAt }
-// Los ids de estación son reales solo para Tres Cantos (17004) y Nuevos Ministerios (18002).
+// Simula la C4a (Alcobendas-San Sebastián de los Reyes – Parla). Los ids son inventados salvo Nuevos Ministerios (18002).
 
 export const DEMO = true;
-const LINE = 'C4b';
+const LINE = 'C4a';
 const HEAD = 15 * 60e3;          // un tren cada 15 min por sentido
 const MIN = 60e3;
 
-// [id, nombre, minutos desde Colmenar Viejo (sentido sur)]
+// [id, nombre, minutos desde Alcobendas (sentido sur)]
 const ROUTE = [
-  ['d01', 'Colmenar Viejo', 0],
-  ['17004', 'Tres Cantos', 6],
+  ['d01', 'Alcobendas-San Sebastián de los Reyes', 0],
+  ['d02', 'Valdelasfuentes', 4],
   ['d03', 'Cantoblanco Universidad', 12],
   ['d04', 'Fuente de la Mora', 17],
   ['d05', 'Chamartín', 24],
@@ -48,7 +48,7 @@ function trip(k, south, delayOverride) {
     key: `${south ? 'S' : 'N'}${k}`,
     k, south, start, delay, cancelled,
     number: String(20000 + (k * 37 + (south ? 508 : 211)) % 900),
-    headsign: south ? 'Parla' : 'Colmenar Viejo',
+    headsign: south ? 'Parla' : 'Alcobendas-San Sebastián de los Reyes',
   };
 }
 
