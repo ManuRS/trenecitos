@@ -115,7 +115,7 @@ function setRide(r) {
   ride = r; rideData = null; store.saveRide(r);
   ui.rideKey = r ? r.key : null;
   renderRide(); renderBoard(); syncWake(); rideChanged();
-  if (r) { refreshRide(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  if (r) { refreshRide(); $('scroller').scrollTo({ top: 0, behavior: 'smooth' }); }
 }
 
 async function refreshRide() {

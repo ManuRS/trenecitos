@@ -106,7 +106,7 @@ export function detailHTML(d, now, isRide = false) {
     const here = n === d.here.hereIdx && d.here.kind !== 'sched';
     const tag = n === d.iFrom ? '<em class="tag">Subes</em>' : n === d.iTo ? '<em class="tag">Bajas</em>' : '';
     const sc = hhmm(s.sched) !== hhmm(s.est);
-    return `<li class="st${inSeg ? ' in' : ''}${seg ? ' seg' : ''}${passed ? ' passed' : ''}${here ? ' here' : ''}${n === d.iFrom || n === d.iTo ? ' key' : ''}${s.skipped ? ' skip' : ''}">
+    return `<li class="st${inSeg ? ' in' : ''}${seg ? ' run' : ''}${passed ? ' passed' : ''}${here ? ' here' : ''}${n === d.iFrom || n === d.iTo ? ' key' : ''}${s.skipped ? ' skip' : ''}">
       <i class="st__dot"></i>
       <span class="st__name">${esc(s.name)}${tag}</span>
       <span class="st__time">${s.skipped ? 'no para' : `${sc && t.status !== 'cancelled' ? `<s>${hhmm(s.sched)}</s>` : ''}${hhmm(s.est)}`}</span>
