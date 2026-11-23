@@ -441,4 +441,12 @@ svg { display: block; }
 .tr__state { grid-area: st; margin-top: 8px; }
 .tr--next .tr__open { padding-top: 16px; padding-bottom: 16px; }
 .tr--next .badge { margin: 0; }
-.tr__top .badge, .tr--next .tr__top .badge { margin-top: 4px; }
+/* Línea, hora tachada y hora: centradas en la misma línea (interlineado recortado a la altura de las cifras) */
+.tr__top .badge, .tr--next .tr__top .badge { margin: 0; flex: none; }
+.tr__dep { display: flex; align-items: center; gap: 8px; line-height: .74; }
+.tr__dep s { margin: 0; line-height: .74; }
+/* Las cifras de Barlow quedan algo bajas en su caja: se bajan la etiqueta y la hora tachada para centrarlas a ojo (medido) */
+.tr__top .badge { position: relative; top: 2px; }
+.tr--next .tr__top .badge { top: 3px; }
+.tr__dep s { position: relative; top: 1px; }
+.tr--next .tr__dep s { top: 0; }
