@@ -314,6 +314,7 @@ svg { display: block; }
 .ride__c .kv--late { color: var(--warn); }
 .ride__c .warnc { color: var(--warn); }
 .ride--arrived .ride__big { color: var(--green); }
+.ride__warn { margin-top: 14px; padding: 10px 12px; border-left: 3px solid var(--warn); background: rgba(240, 170, 40, .08); font: 400 12.5px/1.4 var(--mono); color: var(--warn); }
 
 /* ---------- Ajustes ---------- */
 

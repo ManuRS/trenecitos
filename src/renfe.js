@@ -248,6 +248,12 @@ export async function departures(from, to, now = Date.now(), count = 3) {
   };
 }
 
+// Última vez que cada tren apareció en el tiempo real. Si un tren que ya se había visto deja de salir (y el feed
+// sigue trayendo otros trenes) antes de terminar su recorrido, Renfe ha dejado de informar de él: en el monitor
+// del 16-nov pasó con 205 trenes de Madrid (cancelaciones, trenes que acaban antes…).
+const seenAt = new Map();
+const LOST_MS = 90e3;   // el feed se renueva cada ~40 s: dos renovaciones sin él
+
 export async function detail(key, from, to, now = Date.now()) {
   const [dkey, tid] = key.split('|');
   const ctx = await context(now);
@@ -275,6 +281,9 @@ export async function detail(key, from, to, now = Date.now()) {
   });
   const iFrom = pat.stops.indexOf(a), iTo = pat.stops.indexOf(b, iFrom + 1);
   const last = stops.length - 1;
+  const feedOk = rt.ok && !rt.empty;
+  if (feedOk && (u || veh)) seenAt.set(tid, now);
+  const lost = feedOk && !cancelled && !u && !veh && seenAt.has(tid) && now - seenAt.get(tid) > LOST_MS && now < stops[last].est;
 
   let here;
   if (cancelled) here = { kind: 'cancelled', text: 'Tren cancelado', hereIdx: -1 };
@@ -286,6 +295,7 @@ export async function detail(key, from, to, now = Date.now()) {
     else if (veh.status === 'INCOMING_AT') here = { kind: 'incoming', text: `Entrando en ${nm}`, hereIdx: vi - 1, platform: veh.platform, state: 'en marcha' };
     else here = { kind: 'moving', text: `Hacia ${nm}`, hereIdx: vi - 1, state: 'en marcha' };
   } else if (veh) here = { kind: 'moving', text: 'En marcha', hereIdx: -1, state: 'en marcha' };
+  else if (lost) here = { kind: 'lost', text: 'Sin datos de Renfe', hereIdx: -1 };
   else here = { kind: 'sched', text: stops[0].sched > now ? `Aún no ha salido de ${stops[0].name}` : 'Renfe no publica su posición todavía', hereIdx: -1 };
 
   const seg = new Set(pat.stops.slice(iFrom, iTo + 1).map(s => idx.stops[s].id));
@@ -303,5 +313,5 @@ export async function detail(key, from, to, now = Date.now()) {
   })).filter(x => x.text && !seen.has(x.text) && seen.add(x.text)).sort((x, y) => y.start - x.start).slice(0, 3)
     .map((x, k) => ({ id: 'a' + k, title: x.title, text: x.text }));
 
-  return { train, stops, iFrom, iTo, here, vi, vstatus: veh && !cancelled ? veh.status : '', positionAt: veh && !cancelled && veh.ts ? veh.ts : null, alerts: list, updatedAt: rt.updatedAt };
+  return { train, stops, iFrom, iTo, here, lost, vi, vstatus: veh && !cancelled ? veh.status : '', positionAt: veh && !cancelled && veh.ts ? veh.ts : null, alerts: list, updatedAt: rt.updatedAt };
 }

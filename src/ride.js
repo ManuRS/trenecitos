@@ -67,11 +67,13 @@ export function rideHTML(ride, d, now) {
             + cell('Retraso', t.delay == null ? '—' : esc(dl.short), `kv--${dl.cls}`);
     }
   }
+  const lost = d.lost && info.phase !== 'arrived' ? '<p class="ride__warn">Renfe ya no informa de este tren: puede estar cancelado.</p>' : '';
   return `<section class="ride ride--${info.phase}">
     <div class="ride__body">
       <div class="ride__who">${who}</div>
       ${main}${sub}${prog}
       ${cells ? `<div class="ride__cells${waiting3 ? ' ride__cells--3' : ''}">${cells}</div>` : ''}
+      ${lost}
     </div>
   </section>`;
 }
