@@ -101,7 +101,7 @@ export function pickViewHTML(p, d, now) {
       </div>
     </header>
     <div class="trains">${body}</div>
-    <footer class="panel__foot"><span>${!d || d.error ? '' : d.updatedAt ? 'Renfe · actualizado ' + hhmmss(d.updatedAt) : d.rtDown ? 'Sin conexión con el tiempo real · horarios teóricos' : d.rt === false ? 'Renfe no publica tiempo real ahora · horarios teóricos' : ''}</span></footer>
+    <footer class="panel__foot"><span>${!d || d.error ? '' : d.updatedAt ? 'Actualizado ' + hhmmss(d.updatedAt) : d.rtDown ? 'Sin conexión con el tiempo real · horarios teóricos' : d.rt === false ? 'Renfe no publica tiempo real ahora · horarios teóricos' : ''}</span></footer>
   </article>`;
 }
 

@@ -156,7 +156,7 @@ svg { display: block; }
 .tr__eta i:last-child, .hero__eta i:last-child, .ride__eta i:last-child { margin-right: 0; }
 .tr__eta.is-long, .hero__eta.is-long, .ride__eta.is-long { --s: 34px; }
 .tr__eta.is-soon b, .ride__eta.is-soon b { color: var(--accent-hi); }
-.tr__state { grid-column: 2 / -1; display: flex; align-items: center; gap: 8px; font: 500 11.5px/1.2 var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
+.tr__state { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font: 500 11.5px/1.2 var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
 .tr__state::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
 .tr__state--ok::before { background: var(--green); }
 .tr__state--ok { color: var(--ink); }
