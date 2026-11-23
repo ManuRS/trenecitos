@@ -31,3 +31,14 @@ self.addEventListener('fetch', e => {
     })
   );
 });
+
+// Notificación "tu tren" (la crea app.js al salir de la app): tocarla vuelve a la app.
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const win = all.find(c => new URL(c.url).origin === self.location.origin);
+    if (win) return win.focus();
+    return self.clients.openWindow('./');
+  })());
+});

@@ -31,6 +31,7 @@ export function settingsHTML(s, info, wipeAsk) {
         <h3>Mi tren</h3>
         ${toggle('awake', s.awake, 'Mantener la pantalla encendida', 'mientras sigues un tren')}
         ${toggle('vibrate', s.vibrate, 'Vibrar al acercarme a mi destino', 'solo funciona con la app abierta y en móviles compatibles')}
+        ${toggle('notify', s.notify, 'Aviso al salir de la app', 'una notificación para volver a tu tren')}
       </section>
       <section>
         <h3>Datos</h3>

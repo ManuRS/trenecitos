@@ -6,6 +6,7 @@ import { settingsHTML } from './settings.js';
 import { pickerHTML, initPicker } from './picker.js';
 import { initNav, ask, sync } from './nav.js';
 import { initDrag } from './drag.js';
+import * as notify from './notify.js';
 
 // Datos reales de Renfe; con ?demo se usa la fuente simulada (para ver la interfaz sin red).
 const src = await import(new URLSearchParams(location.search).has('demo') ? './mock.js' : './renfe.js');
@@ -56,7 +57,10 @@ async function init() {
   ride = store.loadRide();
   if (ride && Date.now() > rideExpiry(ride, null)) { ride = null; store.saveRide(null); }
   setInterval(tick, 1000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { refresh(); syncWake(); } });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (ride && settings.notify) notify.show(ride, rideData); return; }
+    notify.clear(); refresh(); syncWake();
+  });
   initNav({ depth, back, hasRide: () => !!ride });
   go();
 }
@@ -101,6 +105,8 @@ async function changeTrain() {
 
 function setRide(r) {
   ride = r; rideData = null; store.saveRide(r);
+  if (r && settings.notify) notify.askPermission();
+  if (!r) notify.clear();
   go();
 }
 
@@ -258,6 +264,7 @@ sheet.addEventListener('change', ev => {
   const k = ev.target.dataset && ev.target.dataset.set;
   if (!k || !(k in settings)) return;
   settings[k] = ev.target.checked; store.saveSettings(settings); syncWake();
+  if (k === 'notify' && settings.notify) notify.askPermission();
 });
 
 board.addEventListener('click', async ev => {

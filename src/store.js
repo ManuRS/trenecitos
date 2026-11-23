@@ -12,7 +12,7 @@ export function load() { const v = read('trips'); return Array.isArray(v) ? v : 
 export const save = trips => write('trips', trips);
 
 /** Ajustes, con valores por defecto para lo que falte. */
-export const DEFAULTS = { count: 2, awake: true, vibrate: true };
+export const DEFAULTS = { count: 2, awake: true, vibrate: true, notify: true };
 export function loadSettings() {
   const v = read('settings');
   const s = { ...DEFAULTS, ...(v && typeof v === 'object' ? v : {}) };
