@@ -17,7 +17,7 @@ const ROUTE = [
   ['d04', 'Fuente de la Mora', 17],
   ['d05', 'Chamartín', 24],
   ['18002', 'Nuevos Ministerios', 30],
-  ['d07', 'Recoletos', 33],
+  ['d07', 'Sol', 33],
   ['d08', 'Atocha', 37],
   ['d09', 'Villaverde Alto', 48],
   ['d10', 'Getafe Centro', 56],
