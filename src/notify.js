@@ -19,13 +19,12 @@ function text(ride, d, now) {
   if (!d) return { title: `Salida ${hhmm(ride.schedDep)}`, body: route };
   const t = d.train, inf = rideInfo(d, now);
   const upd = `Actualizado ${hhmm(d.updatedAt || now)}`;
-  const late = t.delay >= 60 ? ` · retraso ${Math.round(t.delay / 60)} min` : '';
   if (inf.phase === 'cancelled') return { title: 'Tren cancelado', body: `${route}\n${upd}` };
   if (inf.phase === 'riding') {
     const next = inf.left === 1 ? 'Bajas en la siguiente' : `Siguiente: ${inf.next.name}`;
-    return { title: `Llegada ${hhmm(t.estArr)}${late}`, body: `${route}\n${next}\n${upd}` };
+    return { title: `Llegada ${hhmm(t.estArr)}`, body: `${route}\n${next} · ${upd}` };
   }
-  return { title: `Salida ${hhmm(t.estDep)}${t.platform ? ` · Vía ${t.platform}` : ''}`, body: `${route}\nLlegada ${hhmm(t.estArr)}${late}\n${upd}` };
+  return { title: `Salida ${hhmm(t.estDep)}${t.platform ? ` · Vía ${t.platform}` : ''}`, body: `${route}\nLlegada ${hhmm(t.estArr)} · ${upd}` };
 }
 
 export async function show(ride, d, now = Date.now()) {
