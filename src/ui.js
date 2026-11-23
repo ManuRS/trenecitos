@@ -70,7 +70,14 @@ const dirBtn = (trip, dir) => {
     </button>`;
 };
 
-export function tripsViewHTML(trips) {
+/** Aviso de instalar al pie del paso 1 (hasta que se instala o se cierra). */
+function installHint(st) {
+  if (st === 'prompt') return `<aside class="hint"><p>Instálala y ábrela como una app más.</p><button type="button" class="btn-add" data-act="install">Instalar</button><button type="button" class="icon-btn" data-act="hint-off" aria-label="Cerrar">${ICON.close}</button></aside>`;
+  if (st === 'ios') return `<aside class="hint"><p>Instálala: Compartir › Añadir a pantalla de inicio.</p><button type="button" class="icon-btn" data-act="hint-off" aria-label="Cerrar">${ICON.close}</button></aside>`;
+  return '';
+}
+
+export function tripsViewHTML(trips, install = '') {
   if (!trips.length) return `<section class="empty">
     <p class="empty__title">Sin viajes</p>
     <p>Añade el trayecto que haces a diario. Luego eliges el sentido y el tren.</p>
@@ -80,7 +87,7 @@ export function tripsViewHTML(trips) {
       <button type="button" class="fav__grip" aria-label="Mover" title="Arrastra para ordenar">${ICON.grip}</button>
       <div class="fav__dirs">${dirBtn(t, 0)}${dirBtn(t, 1)}</div>
       <button type="button" class="icon-btn fav__rm" data-act="remove" aria-label="Quitar viaje">${ICON.close}</button>
-    </article>`).join('')}</div>`;
+    </article>`).join('')}</div>${installHint(install)}`;
 }
 
 /* ---------- Paso 2: elige tu tren ---------- */

@@ -25,5 +25,9 @@ export const saveSettings = s => write('settings', s);
 export const loadRide = () => { const v = read('ride'); return v && v.key && v.from && v.to ? v : null; };
 export const saveRide = r => (r ? write('ride', r) : drop('ride'));
 
+/** Marcas sueltas (por ejemplo, aviso de instalar ya cerrado). */
+export const flag = k => !!read('flag:' + k);
+export const setFlag = k => write('flag:' + k, 1);
+
 /** Borra todo lo guardado. */
-export const wipe = () => { drop('trips'); drop('settings'); drop('ride'); };
+export const wipe = () => { drop('trips'); drop('settings'); drop('ride'); drop('flag:install'); };

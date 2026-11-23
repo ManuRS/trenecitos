@@ -12,7 +12,14 @@ const toggle = (key, on, title, hint) => `<label class="sw">
   <input type="checkbox" data-set="${key}"${on ? ' checked' : ''}><i class="sw__ui" aria-hidden="true"></i>
 </label>`;
 
-export function settingsHTML(s, info, wipeAsk) {
+const appText = {
+  installed: '<p class="fine fine--first">Instalada en este dispositivo.</p>',
+  prompt: '<button type="button" class="btn-add btn-add--big" data-act="install">Instalar la app</button><p class="fine">Se abre como una app más, sin barra del navegador.</p>',
+  ios: '<p class="fine fine--first">En Safari: Compartir › Añadir a pantalla de inicio. Instalada, también puede avisarte al salir.</p>',
+  none: '<p class="fine fine--first">Desde el menú del navegador: Instalar app o Añadir a pantalla de inicio.</p>',
+};
+
+export function settingsHTML(s, info, wipeAsk, install = 'none') {
   const data = info && (info.built || info.first)
     ? `Horarios de Renfe${info.first ? ` del ${day(info.first)} al ${day(info.last)}` : ''}${info.built ? ` · descargados ${stamp(info.built)}` : ''}. Se renuevan solos cada día.`
     : 'Datos de demostración.';
@@ -32,6 +39,10 @@ export function settingsHTML(s, info, wipeAsk) {
         ${toggle('awake', s.awake, 'Mantener la pantalla encendida', 'mientras sigues un tren')}
         ${toggle('vibrate', s.vibrate, 'Vibrar al acercarme a mi destino', 'solo funciona con la app abierta y en móviles compatibles')}
         ${toggle('notify', s.notify, 'Aviso al salir de la app', 'una notificación para volver a tu tren')}
+      </section>
+      <section>
+        <h3>App</h3>
+        ${appText[install] || appText.none}
       </section>
       <section>
         <h3>Datos</h3>

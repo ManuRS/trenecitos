@@ -421,3 +421,9 @@ svg { display: block; }
 .more__run span { color: var(--faint); }
 .more .note--box { margin-top: 0; }
 .more > :first-child { margin-top: 4px; }
+
+/* Aviso de instalar (paso 1) */
+.hint { display: flex; align-items: center; gap: 10px; margin-top: 4px; padding: 10px 6px 10px 14px; border: 1px dashed var(--rule); border-radius: 3px; color: var(--dim); }
+.hint p { flex: 1; font: 400 13px/1.35 var(--mono); }
+.hint .btn-add { flex: none; }
+.hint .icon-btn { flex: none; margin: 0; }

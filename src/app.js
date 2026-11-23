@@ -7,6 +7,7 @@ import { pickerHTML, initPicker } from './picker.js';
 import { initNav, ask, sync } from './nav.js';
 import { initDrag } from './drag.js';
 import * as notify from './notify.js';
+import * as inst from './install.js';
 
 // Datos reales de Renfe; con ?demo se usa la fuente simulada (para ver la interfaz sin red).
 const src = await import(new URLSearchParams(location.search).has('demo') ? './mock.js' : './renfe.js');
@@ -121,7 +122,7 @@ function render() {
   const now = Date.now(), v = view();
   board.className = 'board board--' + v;
   $('add').hidden = v !== 'trips';
-  if (v === 'trips') board.innerHTML = tripsViewHTML(trips);
+  if (v === 'trips') board.innerHTML = tripsViewHTML(trips, trips.length && !store.flag('install') ? inst.state() : '');
   else if (v === 'pick') board.innerHTML = pickViewHTML(pick, pickData, now);
   else board.innerHTML = stepHTML(3, 'Tu tren', { action: '<button type="button" class="step__act" data-act="change">Cambiar</button>' })
     + rideHTML(ride, rideData, now)
@@ -226,12 +227,12 @@ function closeSheet() {
 async function openSettings() {
   open = { kind: 'settings' };
   if (!infoCache) infoCache = await src.info().catch(() => null);
-  showSheet(settingsHTML(settings, infoCache, false), 'left');
+  showSheet(settingsHTML(settings, infoCache, false, inst.state()), 'left');
   sheet.querySelector('[data-act=close]').focus();
 }
 let wipeAsk = false;
 function paintSettings(focusSel) {
-  sheet.innerHTML = settingsHTML(settings, infoCache, wipeAsk);
+  sheet.innerHTML = settingsHTML(settings, infoCache, wipeAsk, inst.state());
   if (focusSel) { const el = sheet.querySelector(focusSel); if (el) el.focus(); }
 }
 
@@ -249,8 +250,9 @@ function openPicker() {
 $('add').addEventListener('click', openPicker);
 $('menu').addEventListener('click', () => { wipeAsk = false; openSettings(); });
 scrim.addEventListener('click', closeSheet);
-sheet.addEventListener('click', ev => {
+sheet.addEventListener('click', async ev => {
   if (ev.target.closest('[data-act=close]')) return closeSheet();
+  if (ev.target.closest('[data-act=install]')) { await inst.install(); return; }
   if (open && open.kind === 'settings') {
     const c = ev.target.closest('[data-count]');
     if (c) { settings.count = +c.dataset.count; store.saveSettings(settings); paintSettings(`[data-count="${settings.count}"]`); if (view() === 'pick') refresh(); return; }
@@ -282,6 +284,8 @@ board.addEventListener('click', async ev => {
     return;
   }
   if (act === 'back') return back();
+  if (act === 'install') { await inst.install(); return; }
+  if (act === 'hint-off') { store.setFlag('install'); return render(); }
   if (act === 'pick' && pick && pickData && pickData.trains) {
     const t = pickData.trains.find(x => x.key === el.dataset.key);
     if (t) setRide(mkRide(pick.from, pick.to, t));
@@ -289,6 +293,9 @@ board.addEventListener('click', async ev => {
   }
   if (act === 'change') return changeTrain();
 });
+
+// Cambia lo que se puede hacer para instalar (aparece el botón, se instala…)
+inst.onChange(() => { if (view() === 'trips') render(); if (open && open.kind === 'settings') paintSettings(); });
 
 // Paso 1: ordenar los viajes arrastrando el asa de cada tarjeta.
 initDrag(board, ids => {
