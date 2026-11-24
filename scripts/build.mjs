@@ -12,12 +12,8 @@ for (const p of ['index.html', 'styles.css', 'manifest.webmanifest', 'icon.svg',
   await cp(p, `${dist}/${p}`, { recursive: true });
 }
 
-// Versión de build: la lleva el service worker (invalida la caché en cada despliegue) y la app (Ajustes › Acerca de).
-const BUILD = new Date().toISOString();
-let commit = (process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 7);
-if (!commit) { try { commit = (await import('node:child_process')).execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { /* sin git */ } }
-await writeFile(`${dist}/src/version.js`, `export const VERSION = ${JSON.stringify({ build: BUILD, commit })};\n`);
-const sw = (await readFile('sw.js', 'utf8')).replace('__BUILD__', BUILD);
+// El service worker lleva la fecha de build para invalidar la caché en cada despliegue (la versión visible está en src/version.js).
+const sw = (await readFile('sw.js', 'utf8')).replace('__BUILD__', new Date().toISOString());
 await writeFile(`${dist}/sw.js`, sw);
 
 await mkdir(`${dist}/fonts`, { recursive: true });

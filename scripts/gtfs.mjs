@@ -16,6 +16,7 @@ export function displayName(name) {
     .replace(/^Madrid-/, '')
     .replace(/\s+Cercanías$/i, '')
     .replace(/^Chamartín-Clara Campoamor$/, 'Chamartín')
+    .replace(/^Alcobendas-San Sebastián de los Reyes$/, 'Alcobendas-Sanse')
     .replace(/\s+P\.V\.$/, '');
 }
 

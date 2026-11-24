@@ -11,7 +11,7 @@ const MIN = 60e3;
 
 // [id, nombre, minutos desde Alcobendas (sentido sur)]
 const ROUTE = [
-  ['d01', 'Alcobendas-San Sebastián de los Reyes', 0],
+  ['d01', 'Alcobendas-Sanse', 0],
   ['d02', 'Valdelasfuentes', 4],
   ['d03', 'Cantoblanco Universidad', 12],
   ['d04', 'Fuente de la Mora', 17],
@@ -49,7 +49,7 @@ function trip(k, south, delayOverride) {
     key: `${south ? 'S' : 'N'}${k}`,
     k, south, start, delay, cancelled,
     number: String(20000 + (k * 37 + (south ? 508 : 211)) % 900),
-    headsign: south ? 'Parla' : 'Alcobendas-San Sebastián de los Reyes',
+    headsign: south ? 'Parla' : 'Alcobendas-Sanse',
   };
 }
 
