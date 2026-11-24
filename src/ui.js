@@ -104,7 +104,9 @@ export function pickViewHTML(p, d, now) {
         <div class="route__row"><i class="route__dot route__dot--end"></i><span class="route__name">${esc(p.to.name)}</span></div>
       </div>
     </header>
-    ${d && d.alerts && d.alerts.length ? `<div class="palerts">${d.alerts.map(a => `<details class="palert" data-k="${esc(a.title || a.text)}"><summary>${esc(a.title || a.text)}</summary>${a.title ? `<p>${esc(a.text)}</p>` : ''}</details>`).join('')}</div>` : ''}
+    ${d && d.alerts && d.alerts.length ? `<div class="palerts">${d.alerts.map(a => a.title && a.title !== a.text
+      ? `<details class="palert" data-k="${esc(a.title)}"><summary>${esc(a.title)}</summary><p>${esc(a.text)}</p></details>`
+      : `<div class="palert"><div class="palert__t">${esc(a.text)}</div></div>`).join('')}</div>` : ''}
     <div class="trains">${body}</div>
     <footer class="panel__foot"><span>${!d || d.error ? '' : d.updatedAt ? 'Actualizado ' + hhmmss(d.updatedAt) : d.rtDown ? 'Sin conexión con el tiempo real · horarios teóricos' : d.rt === false ? 'Renfe no publica tiempo real ahora · horarios teóricos' : ''}</span></footer>
   </article>`;

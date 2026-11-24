@@ -455,10 +455,11 @@ svg { display: block; }
 .palerts { border-top: 1px solid var(--rule); }
 .palert { padding: 10px 14px 10px 13px; border-left: 3px solid var(--warn); }
 .palert + .palert { border-top: 1px solid var(--rule); }
-.palert summary {
-  display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none;
+.palert__t, .palert summary {
+  display: flex; align-items: center; gap: 8px; list-style: none;
   font: 600 16px/1.2 var(--cond); letter-spacing: .03em; text-transform: uppercase; color: var(--warn);
 }
+.palert summary { cursor: pointer; }
 .palert summary::-webkit-details-marker { display: none; }
 .palert summary::after { content: '+'; margin-left: auto; flex: none; font: 500 18px/1 var(--mono); color: var(--dim); }
 .palert[open] summary::after { content: '−'; }
