@@ -155,6 +155,5 @@ export function detailBodyHTML(d, now) {
         <h3>Avisos de Renfe</h3>
         ${d.alerts.map(a => `<div class="alert">${a.title ? `<p class="alert__t">${esc(a.title)}</p>` : ''}<p>${esc(a.text)}</p></div>`).join('')}
       </section>` : ''}
-      <p class="fine">Renfe publica un único retraso por tren: las horas estimadas son el horario más ese retraso.</p>
     </div>`;
 }
