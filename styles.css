@@ -403,7 +403,7 @@ svg { display: block; }
 .fav__go + .fav__go { border-top: 1px solid var(--rule); }
 .fav__go:hover { background: var(--panel-2); }
 .fav__go:hover .fav__to { color: var(--accent-hi); }
-.fav__a, .fav__b { overflow-wrap: anywhere; }
+.fav__a, .fav__b { overflow-wrap: normal; }   /* fitNames() reduce la letra si un nombre no cabe; solo parte la palabra como último recurso */
 .fav__to { color: var(--faint); }
 .fav__to svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .fav__rm { align-self: center; margin: 0; }

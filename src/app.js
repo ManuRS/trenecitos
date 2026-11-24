@@ -132,7 +132,22 @@ function render() {
   else board.innerHTML = stepHTML(3, 'Tu tren', { action: '<button type="button" class="step__act" data-act="change">Cambiar</button>' })
     + rideHTML(ride, rideData, now)
     + (rideData ? detailBodyHTML(rideData, now) : '');
+  if (v === 'trips') { fitNames(); document.fonts?.ready.then(() => view() === 'trips' && fitNames()); }
 }
+
+/** Los nombres largos (Majadahonda, Fuenlabrada…) reducen la letra de su fila hasta caber, sin partirse a mitad de palabra. */
+function fitNames() {
+  for (const go of board.querySelectorAll('.fav__go')) {
+    const names = [...go.querySelectorAll('.fav__a, .fav__b')];
+    const over = () => names.some(n => n.scrollWidth > n.clientWidth + 1);
+    let s = 21;
+    for (const n of names) { n.style.fontSize = ''; n.style.overflowWrap = ''; }
+    while (s > 15 && over()) { s--; for (const n of names) n.style.fontSize = s + 'px'; }
+    if (over()) for (const n of names) n.style.overflowWrap = 'anywhere';
+  }
+}
+let fitT = 0;
+addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(() => view() === 'trips' && fitNames(), 150); });
 
 function tick() {
   const now = Date.now();

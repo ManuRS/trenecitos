@@ -1,5 +1,6 @@
 // Panel de ajustes (se abre con el menú de la esquina superior izquierda).
 import { esc } from './format.js';
+import { VERSION } from './version.js';
 
 const day = k => k ? `${+k.slice(6, 8)}/${+k.slice(4, 6)}` : '';
 const stamp = iso => {
@@ -54,6 +55,7 @@ export function settingsHTML(s, info, wipeAsk, install = 'none') {
         <h3>Acerca de</h3>
         <p class="about">Trenecitos muestra los próximos trenes de Cercanías Madrid con los datos abiertos de Renfe Operadora (CC BY 4.0). No es una aplicación oficial de Renfe.</p>
         <p class="about"><a href="https://github.com/ManuRS/trenecitos" target="_blank" rel="noopener">Código fuente en GitHub</a></p>
+        ${VERSION.build ? `<p class="fine">Versión ${stamp(VERSION.build)}${VERSION.commit ? ` · ${esc(VERSION.commit)}` : ''}</p>` : ''}
       </section>
     </div>`;
 }
