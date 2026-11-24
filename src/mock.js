@@ -29,6 +29,7 @@ const hash = n => { let x = (n * 2654435761) >>> 0; x ^= x >>> 15; x = Math.imul
 const idx = id => ROUTE.findIndex(r => r[0] === id);
 
 export const stations = async () => ROUTE.map(([id, name]) => ({ id, name }));
+export const links = async () => null;   // sin filtro: todas se unen con todas
 export const info = async () => ({ built: null, first: null, last: null });
 
 /** Parada i de un viaje en el sentido dado, con su offset en minutos desde el origen del viaje. */

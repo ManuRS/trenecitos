@@ -26,6 +26,7 @@ const REFRESH = { pick: 40000, ride: 20000 };
 let settings = store.loadSettings();
 let trips = [];
 let stationList = [];
+let reach = null;                     // qué estaciones se unen con tren directo (null = sin filtro)
 let pick = null, pickData = null;     // paso 2: { from, to } y sus trenes
 let ride = null, rideData = null;     // paso 3: el tren elegido y su último detalle
 let wl = null;                        // bloqueo de pantalla mientras viajas
@@ -41,7 +42,7 @@ const view = () => ride ? 'ride' : pick ? 'pick' : 'trips';
 /* ---------- Arranque ---------- */
 
 async function init() {
-  try { stationList = await src.stations(); }
+  try { stationList = await src.stations(); reach = await src.links().catch(() => null); }
   catch (e) { console.error(e); board.innerHTML = '<section class="empty"><p class="empty__title">Sin horarios</p><p>No se han podido cargar los horarios de Renfe. Comprueba la conexión y recarga la página.</p></section>'; return; }
   const saved = store.load();
   if (saved) {                         // solo trayectos cuyas estaciones existen en los horarios actuales
@@ -245,7 +246,7 @@ function paintSettings(focusSel) {
 function openPicker() {
   open = { kind: 'picker' };
   showSheet(pickerHTML());
-  dropPicker = initPicker(sheet, stationList, ({ from, to }) => {
+  dropPicker = initPicker(sheet, stationList, reach, ({ from, to }) => {
     trips.push({ id: uid(), from, to }); store.save(trips);
     closeSheet(); render();
   });

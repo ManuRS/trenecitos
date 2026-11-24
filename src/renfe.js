@@ -225,6 +225,17 @@ async function context(now) {
 
 export const stations = async () => (await loadIndex()).stops;
 
+/** Qué estaciones se pueden unir con un mismo tren: `to.get(id)` = a las que se llega desde id, `from.get(id)` = desde las que se llega a id. */
+export async function links() {
+  const idx = await loadIndex(), to = new Map(), from = new Map();
+  const set = (m, k) => m.get(k) || m.set(k, new Set()).get(k);
+  for (const { stops } of idx.patterns) {
+    const ids = stops.map(i => idx.stops[i].id);
+    ids.forEach((a, i) => { for (let j = i + 1; j < ids.length; j++) { set(to, a).add(ids[j]); set(from, ids[j]).add(a); } });
+  }
+  return { to, from };
+}
+
 /** Datos del horario cargado: cuándo se construyó y qué días cubre. */
 export async function info() {
   const idx = await loadIndex(), d = [...idx.dates].sort();

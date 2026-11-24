@@ -19,24 +19,27 @@ export function pickerHTML() {
 }
 
 /** Conecta la lógica del buscador. Devuelve una función para destruirlo. */
-export function initPicker(root, stations, onSave) {
+export function initPicker(root, stations, reach, onSave) {
   const sel = { from: null, to: null };
   let active = 'from';
   const inputs = { from: root.querySelector('[data-f=from] input'), to: root.querySelector('[data-f=to] input') };
   const fields = { from: root.querySelector('[data-f=from]'), to: root.querySelector('[data-f=to]') };
   const list = root.querySelector('.results');
   const saveBtn = root.querySelector('[data-act=save]');
+  const hint = root.querySelector('.picker .fine');
 
   function render() {
     const q = norm(inputs[active].value.trim());
     const other = sel[active === 'from' ? 'to' : 'from'];
+    const ok = other && reach ? reach[active === 'to' ? 'to' : 'from'].get(other.id) : null;   // las que se unen con la otra por un mismo tren
     const items = stations
-      .filter(s => (!other || s.id !== other.id) && (!q || norm(s.name).includes(q) || (s.alt && norm(s.alt).includes(q))))
+      .filter(s => (!other || s.id !== other.id) && (!ok || ok.has(s.id)) && (!q || norm(s.name).includes(q) || (s.alt && norm(s.alt).includes(q))))
       .sort((a, b) => (norm(b.name).startsWith(q) - norm(a.name).startsWith(q)) || a.name.localeCompare(b.name, 'es'));
     list.innerHTML = (sel.from && sel.to) ? '' : items.length
       ? items.map(s => `<li><button type="button" role="option" data-id="${esc(s.id)}">${esc(s.name)}</button></li>`).join('')
       : '<li class="results__none">Ninguna estación coincide</li>';
     saveBtn.disabled = !(sel.from && sel.to);
+    hint.textContent = ok && !(sel.from && sel.to) ? `Solo con tren directo ${active === 'to' ? 'desde' : 'hasta'} ${other.name}.` : 'Solo estaciones del núcleo de Cercanías Madrid.';
     for (const f of ['from', 'to']) {
       fields[f].classList.toggle('is-set', !!sel[f]);
       fields[f].classList.toggle('is-active', f === active);
@@ -64,6 +67,7 @@ export function initPicker(root, stations, onSave) {
     if (ev.target.closest('[data-act=swap]')) {
       [sel.from, sel.to] = [sel.to, sel.from];
       [inputs.from.value, inputs.to.value] = [inputs.to.value, inputs.from.value];
+      if (sel.from && sel.to && reach && !(reach.to.get(sel.from.id) || new Set()).has(sel.to.id)) { sel.to = null; inputs.to.value = ''; }   // sin tren en sentido contrario
       render();
       return;
     }
