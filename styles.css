@@ -368,6 +368,8 @@ svg { display: block; }
 .dlg p { font: 400 15px/1.45 system-ui, sans-serif; color: var(--dim); }
 .dlg__btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
 .dlg__btns .btn-add { margin-top: 0; justify-content: center; min-width: 110px; padding: 11px 14px; }
+.dlg__btns--col { flex-direction: column; }
+.dlg__btns--col .btn-add { width: 100%; }
 .toast { position: fixed; z-index: 30; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: min(420px, calc(100vw - 32px)); padding: 12px 16px; border-radius: 4px; background: var(--ink); color: var(--bg); font: 500 14px/1.35 system-ui, sans-serif; box-shadow: 0 6px 24px rgba(0, 0, 0, .45); }
 .toast[hidden] { display: none; }
 

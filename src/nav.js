@@ -30,17 +30,24 @@ export function toast(msg, ms = 4000) {
 
 /* ---------- Confirmación ---------- */
 
-/** Pregunta con dos botones. Devuelve true si se confirma; atrás/Escape/fuera cuentan como cancelar. */
-export function ask({ title, text, ok, no = 'Cancelar', danger = true }) {
+/** Pregunta con dos botones (ok/no) o con las opciones que se den en `choices` ([{ label, value, danger?, focus? }], en vertical).
+ *  Devuelve true/false (dos botones) o el `value` elegido (null si se cancela); atrás/Escape/fuera cuentan como cancelar. */
+export function ask({ title, text, ok, no = 'Cancelar', danger = true, choices }) {
   const d = document.getElementById('askDlg');
   d.querySelector('[data-t=title]').textContent = title;
   d.querySelector('[data-t=text]').textContent = text;
-  const bo = d.querySelector('[data-t=ok]'), bn = d.querySelector('[data-t=no]');
-  bo.textContent = ok; bn.textContent = no;
-  bo.classList.toggle('btn-add--danger', danger);
+  const list = choices || [{ label: no, value: false, focus: true }, { label: ok, value: true, danger }];
+  const box = d.querySelector('.dlg__btns');
+  box.classList.toggle('dlg__btns--col', !!choices);
+  box.replaceChildren(...list.map((c, i) => {
+    const b = document.createElement('button');
+    b.className = 'btn-add' + (c.danger ? ' btn-add--danger' : '');
+    b.value = String(i); b.textContent = c.label; b.autofocus = !!c.focus;
+    return b;
+  }));
   d.returnValue = '';
   return new Promise(res => {
-    d.addEventListener('close', () => res(d.returnValue === 'ok'), { once: true });
+    d.addEventListener('close', () => res(d.returnValue === '' ? (choices ? null : false) : list[+d.returnValue].value), { once: true });
     openDialog(d);
   });
 }

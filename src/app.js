@@ -98,8 +98,16 @@ async function changeTrain() {
   const info = rideData ? rideInfo(rideData, Date.now()) : null;
   const done = info && (info.phase === 'cancelled' || info.phase === 'arrived');
   if (!done) {
-    const ok = await ask({ title: '¿Cambiar de tren?', text: `Dejarás de seguir el de las ${hhmm(rideData ? rideData.train.estDep : ride.schedDep)}.`, ok: 'Cambiar', no: 'Seguir con este' });
-    if (!ok || !ride) return;
+    const what = await ask({
+      title: '¿Cambiar de tren?', text: `Dejarás de seguir el de las ${hhmm(rideData ? rideData.train.estDep : ride.schedDep)}.`,
+      choices: [
+        { label: 'Dejar tren y cerrar app', value: 'leave' },
+        { label: 'Elegir otro tren distinto', value: 'other' },
+        { label: 'Permanecer en este tren', value: 'stay', focus: true },
+      ],
+    });
+    if (!ride || !what || what === 'stay') return;
+    if (what === 'leave') { pick = null; pickData = null; setRide(null); window.close(); return; }   // en la PWA instalada cierra la ventana; en una pestaña no puede y queda en el paso 1
   }
   pick = { from: ride.from, to: ride.to }; pickData = null;
   setRide(null);
