@@ -210,8 +210,10 @@ function showSheet(html, side = 'right') {
   if (dropPicker) { dropPicker(); dropPicker = null; }
   lastFocus = document.activeElement;
   sheet.innerHTML = html;
+  sheet.style.transition = 'none';                         // cambiar de lado sin animar: si no, cruza la pantalla
   sheet.classList.toggle('sheet--left', side === 'left');
-  void sheet.offsetWidth;                                  // fija el lado antes de animar la entrada
+  void sheet.offsetWidth;
+  sheet.style.transition = '';
   sheet.classList.add('is-open'); scrim.classList.add('is-open');
   sheet.setAttribute('aria-hidden', 'false');
   document.body.classList.add('no-scroll');
