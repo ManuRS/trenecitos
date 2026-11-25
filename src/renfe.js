@@ -205,13 +205,17 @@ function trainOf(ctx, day, n, from, to, keepSkipped = false) {
   const delay = cancelled ? null : u && u.delay != null ? u.delay : null;
   const d = (delay || 0) * 1000;
   const vi = cancelled ? -1 : where(idx, pat, veh);
+  // Parado (o entrando) en su cabecera con la hora de salida ya pasada: Renfe no estima la salida,
+  // solo suma al retraso el tiempo que pasa (monitor del 25-nov, C4b en Colmenar Viejo).
+  const held = !cancelled && veh && vi === 0 && veh.status !== 'IN_TRANSIT_TO' && ctx.now >= sec(pat.dep[0]) + 60e3
+    ? idx.stops[pat.stops[0]].name : null;
   let phase = null;
   if (vi === i && veh) phase = veh.status === 'STOPPED_AT' ? 'at' : veh.status === 'INCOMING_AT' ? 'arriving' : null;
   return {
     key: `${day.key}|${tid}`, line: route.short, number: number(tid), headsign: idx.stops[pat.stops[pat.stops.length - 1]].name,
     schedDep, schedArr, estDep: schedDep + d, estArr: schedArr + d, delay,
     status: cancelled ? 'cancelled' : veh ? 'running' : 'scheduled',
-    hops: j - i, phase,
+    hops: j - i, phase, held,
     platform: vi === i && veh ? veh.platform : null,
     _passed: vi > i, _vi: vi, skipsEnds, _rid: route.id, _seg: pat.stops.slice(i, j + 1),
   };
@@ -220,7 +224,7 @@ function trainOf(ctx, day, n, from, to, keepSkipped = false) {
 async function context(now) {
   const idx = await loadIndex();
   const [d, rt] = await Promise.all([loadDays(idx, now), realtime().catch(() => ({ ok: false, trips: new Map(), veh: new Map(), updatedAt: null }))]);
-  return { idx, rt, ...d };
+  return { idx, rt, now, ...d };
 }
 
 export const stations = async () => (await loadIndex()).stops;

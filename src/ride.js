@@ -48,7 +48,7 @@ export function rideHTML(ride, d, now) {
     const tag = waiting ? dayTag(t.estDep, now) : '';
     main = `<div class="ride__row">
         <div><p class="ride__lbl">${waiting ? `Sale${tag ? ' ' + tag : ''} a las` : 'Llegas a las'}</p><p class="ride__time">${hhmm(target)}</p></div>
-        <div class="ride__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${target}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</div>
+        ${waiting && t.held ? '<div class="ride__eta is-soon is-long"><b>Sin salir</b></div>' : `<div class="ride__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${target}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</div>`}
       </div>`;
     const span = Math.max(1, t.estArr - t.estDep);
     const p = waiting ? 0 : Math.min(98, Math.max(2, ((now - t.estDep) / span) * 100));

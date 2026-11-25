@@ -31,12 +31,11 @@ export function settingsHTML(s, info, wipeAsk, install = 'none') {
       <section>
         <h3 class="h-big">Trenecitos</h3>
         <p class="about">Trenecitos muestra los próximos trenes de Cercanías Madrid. Usa los datos abiertos de Renfe Operadora (CC BY 4.0) pero no es una aplicación oficial.</p>
-        <p class="fine">${esc(data)}</p>
       </section>
       <section>
         <h3>Mi tren</h3>
         ${toggle('awake', s.awake, 'Mantener la pantalla encendida', 'mientras sigues un tren')}
-        ${toggle('vibrate', s.vibrate, 'Vibrar al acercarme a mi destino', 'con la app abierta y en móviles compatibles')}
+        ${toggle('vibrate', s.vibrate, 'Vibrar al acercarme a mi destino', 'con la app abierta y móvil compatible')}
         ${toggle('notify', s.notify, 'Aviso al salir de la app', 'una notificación para volver a tu tren')}
       </section>
       ${install === 'installed' ? '' : `<section>
@@ -44,13 +43,17 @@ export function settingsHTML(s, info, wipeAsk, install = 'none') {
         ${appText[install] || appText.none}
       </section>`}
       <section>
+        <h3>Base de datos</h3>
+        <p class="fine fine--first">${esc(data)}</p>
+      </section>
+      <section>
         <h3>Datos</h3>
         <p class="fine fine--first">Tus trayectos y ajustes solo se guardan en tu teléfono. Borrarlos no se puede deshacer.</p>
         <button type="button" class="btn-add btn-add--big btn-add--danger" data-act="wipe">${wipeAsk ? 'Pulsa otra vez para borrar' : 'Borrar mis datos'}</button>
       </section>
       <footer class="credits">
         <p>Versión ${VERSION}</p>
-        <p class="credits__by">Manuel Reyes · <a href="https://github.com/ManuRS/trenecitos" target="_blank" rel="noopener">Proyecto en GitHub</a></p>
+        <p class="credits__by"><a href="https://www.linkedin.com/in/manuelrs/" target="_blank" rel="noopener">Manuel Reyes</a> · <a href="https://github.com/ManuRS/trenecitos" target="_blank" rel="noopener">Proyecto en GitHub</a></p>
       </footer>
     </div>`;
 }

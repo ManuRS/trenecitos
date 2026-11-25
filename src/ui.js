@@ -21,6 +21,7 @@ function stateLine(t) {
   if (t.status === 'scheduled') {
     return { cls: d.cls === 'late' ? 'late' : 'sched', text: [d.cls === 'late' ? d.text : '', d.cls === 'late' ? 'según horario' : 'según horario · sin posición'].filter(Boolean).join(' · ') };
   }
+  if (t.held) return { cls: d.cls, text: [d.text, `sin salir de ${t.held}`, via].filter(Boolean).join(' · ') };
   const phase = t.phase === 'at' ? 'en la estación' : t.phase === 'arriving' ? 'llegando' : 'circulando';
   return { cls: d.cls, text: [d.text, phase, via].filter(Boolean).join(' · ') };
 }
@@ -35,7 +36,8 @@ function trainRow(t, i, now) {
       <span class="tr__top">${badge(t.line)}<span class="tr__dep">${changed ? `<s>${hhmm(t.schedDep)}</s>` : ''}${hhmm(t.estDep)}</span></span>
       <span class="tr__arr">Llega a las <b>${hhmm(t.estArr)}</b></span>
       <span class="tr__sub">${dayTag(t.estDep, now) ? `<b class="tr__day">${dayTag(t.estDep, now)}</b> · ` : ''}Tren sentido ${esc(t.headsign)}</span>
-      ${live
+      ${live && t.held ? '<span class="tr__eta is-soon is-long"><b>Sin salir</b></span>'
+        : live
         ? `<span class="tr__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${t.estDep}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</span>`
         : '<span class="tr__eta"><b>—</b></span>'}
       <span class="tr__state tr__state--${st.cls}">${esc(st.text)}</span>

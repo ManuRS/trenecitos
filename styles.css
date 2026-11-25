@@ -343,7 +343,7 @@ svg { display: block; }
 .credits { margin-top: 34px; text-align: center; }
 .credits p { font: 400 11.5px/1.45 var(--mono); color: var(--faint); }
 .credits .credits__by { margin-top: 4px; font: 500 14px/1.5 system-ui, sans-serif; color: var(--dim); }
-.credits a { color: var(--ink); }
+.credits a { color: var(--ink); text-decoration: none; }
 .favs__add { margin-top: 12px; }
 
 /* ---------- Escritorio ---------- */
