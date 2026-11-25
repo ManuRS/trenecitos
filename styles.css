@@ -220,7 +220,11 @@ svg { display: block; }
 .hero__eta.is-soon b { color: var(--accent-hi); }
 .hero__sub { margin-top: 12px; font: 400 12px/1.4 var(--mono); color: var(--dim); }
 
-.now { padding: 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; }
+.now { position: relative; overflow: hidden; padding: 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; }
+.reload { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(230, 234, 240, .32); transform-origin: left; animation: reload-run var(--dur) linear var(--off) both; }
+.reload.is-wait { animation: reload-wait 1.1s ease-in-out infinite; }
+@keyframes reload-run { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes reload-wait { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 .now h3 { margin-bottom: 8px; }
 .now__text { font: 700 24px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
 .now__text--bad { color: var(--red); }
@@ -318,12 +322,6 @@ svg { display: block; }
 
 /* ---------- Ajustes ---------- */
 
-.seg { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
-.seg--2 { grid-template-columns: repeat(2, 1fr); }
-.seg button { padding: 12px 0; text-align: center; font: 700 22px/1 var(--cond); color: var(--dim); background: var(--panel); }
-.seg button + button { border-left: 1px solid var(--rule); }
-.seg button:hover { color: var(--ink); background: var(--panel-2); }
-.seg button.is-on { background: var(--accent); color: #fff; }
 .sw { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
 .sw__t { font: 600 19px/1.15 var(--cond); letter-spacing: .01em; }
 .sw__t small { display: block; margin-top: 3px; font: 400 11.5px/1.35 var(--mono); color: var(--faint); letter-spacing: 0; }
@@ -341,6 +339,12 @@ svg { display: block; }
 .about { font: 400 14px/1.5 system-ui, sans-serif; color: var(--dim); }
 .about + .about { margin-top: 10px; }
 .about a { color: var(--ink); }
+.sheet .h-big { font: 700 26px/1 var(--cond); letter-spacing: .09em; color: var(--ink); margin-bottom: 12px; }
+.credits { margin-top: 34px; text-align: center; }
+.credits p { font: 400 11.5px/1.45 var(--mono); color: var(--faint); }
+.credits .credits__by { margin-top: 4px; font: 500 14px/1.5 system-ui, sans-serif; color: var(--dim); }
+.credits a { color: var(--ink); }
+.favs__add { margin-top: 12px; }
 
 /* ---------- Escritorio ---------- */
 

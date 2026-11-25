@@ -84,7 +84,8 @@ export function tripsViewHTML(trips, install = '') {
       <button type="button" class="fav__grip" aria-label="Mover" title="Arrastra para ordenar">${ICON.grip}</button>
       <div class="fav__dirs">${dirBtn(t, 0)}${dirBtn(t, 1)}</div>
       <button type="button" class="icon-btn fav__rm" data-act="remove" aria-label="Quitar viaje">${ICON.close}</button>
-    </article>`).join('')}</div>${installHint(install)}`;
+    </article>`).join('')}</div>
+    <button type="button" class="btn-add btn-add--big favs__add" data-act="add">Añadir nuevo trayecto</button>${installHint(install)}`;
 }
 
 /* ---------- Paso 2: elige tu tren ---------- */
@@ -115,7 +116,7 @@ export function pickViewHTML(p, d, now) {
 /* ---------- Detalle de un tren ---------- */
 
 /** Paso 3, debajo de la tarjeta: dónde va el tren, su recorrido y los avisos de Renfe. */
-export function detailBodyHTML(d, now) {
+export function detailBodyHTML(d, now, bar = '') {
   const t = d.train;
   const first = d.stops[0].name, last = d.stops[d.stops.length - 1].name;
 
@@ -141,6 +142,7 @@ export function detailBodyHTML(d, now) {
         d.here.state || '',
         d.positionAt ? `posición ${ago(d.positionAt, now)}` : 'sin posición: horas según horario',
       ].filter(Boolean).join(' · ')}</p>
+      ${bar}
     </section>`;
 
   return `<div class="more">

@@ -333,5 +333,5 @@ export async function detail(key, from, to, now = Date.now()) {
   const seg = new Set(pat.stops.slice(iFrom, iTo + 1).map(s => idx.stops[s].id));
   const list = await alertsFor(new Set([idx.routes[pat.route].id]), seg, now);
 
-  return { train, stops, iFrom, iTo, here, lost, vi, vstatus: veh && !cancelled ? veh.status : '', positionAt: veh && !cancelled && veh.ts ? veh.ts : null, alerts: list, updatedAt: rt.updatedAt };
+  return { train, stops, iFrom, iTo, here, lost, vi, vstatus: veh && !cancelled ? veh.status : '', positionAt: veh && !cancelled && veh.ts ? veh.ts : null, alerts: list, updatedAt: rt.updatedAt, rtDown: !rt.ok };
 }

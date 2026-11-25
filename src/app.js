@@ -18,10 +18,11 @@ const board = $('board'), sheet = $('sheet'), scrim = $('scrim');
 
 // La app va por pasos:
 //   1 · ¿Cuál es tu viaje?  favoritos, cada uno con sus dos sentidos. Sin tiempo real: no pide nada a Renfe.
-//   2 · Elige tu tren       los próximos 2 o 3 trenes del sentido elegido. Refresco cada 40 s.
+//   2 · Elige tu tren       los próximos 3 trenes del sentido elegido. Refresco cada 40 s.
 //   3 · Tu tren             la tarjeta del tren elegido y su recorrido. Refresco cada 20 s.
 // Con un tren elegido al abrir la app, se entra directamente al paso 3.
 const REFRESH = { pick: 40000, ride: 20000 };
+const COUNT = 3;                      // trenes para elegir en el paso 2
 
 let settings = store.loadSettings();
 let trips = [];
@@ -29,6 +30,7 @@ let stationList = [];
 let reach = null;                     // qué estaciones se unen con tren directo (null = sin filtro)
 let pick = null, pickData = null;     // paso 2: { from, to } y sus trenes
 let ride = null, rideData = null;     // paso 3: el tren elegido y su último detalle
+let rideAt = 0;                       // paso 3: cuándo llegaron los últimos datos buenos (0 = esperando o sin red)
 let wl = null;                        // bloqueo de pantalla mientras viajas
 let infoCache = null;
 let open = null;                      // panel encima: { kind: 'picker' } | { kind: 'settings' }
@@ -130,7 +132,6 @@ const mkRide = (from, to, t) => ({
 function render() {
   const now = Date.now(), v = view();
   board.className = 'board board--' + v;
-  $('add').hidden = v !== 'trips';
   if (v === 'trips') board.innerHTML = tripsViewHTML(trips, trips.length && !store.flag('install') ? inst.state() : '');
   else if (v === 'pick') {
     const opened = new Set([...board.querySelectorAll('.palert[open]')].map(e => e.dataset.k));   // avisos desplegados: siguen así al refrescar
@@ -139,8 +140,14 @@ function render() {
   }
   else board.innerHTML = stepHTML(3, 'Tu tren', { action: '<button type="button" class="step__act" data-act="change">Cambiar</button>' })
     + rideHTML(ride, rideData, now)
-    + (rideData ? detailBodyHTML(rideData, now) : '');
+    + (rideData ? detailBodyHTML(rideData, now, reloadBar(now)) : '');
   if (v === 'trips') { fitNames(); document.fonts?.ready.then(() => view() === 'trips' && fitNames()); }
+}
+
+/** Línea al pie de "Ahora" que avanza hasta la próxima recarga; llena y parpadeando mientras espera o sin red. */
+function reloadBar(now) {
+  if (!rideAt) return '<i class="reload is-wait" aria-hidden="true"></i>';
+  return `<i class="reload" aria-hidden="true" style="--dur:${REFRESH.ride}ms;--off:${rideAt - now}ms"></i>`;
 }
 
 /** Los nombres largos (Majadahonda, Fuenlabrada…) reducen la letra de su fila hasta caber, sin partirse a mitad de palabra. */
@@ -184,7 +191,7 @@ async function refresh() {
 async function refreshPick() {
   const p = pick;
   let d;
-  try { d = await src.departures(p.from.id, p.to.id, Date.now(), settings.count); }
+  try { d = await src.departures(p.from.id, p.to.id, Date.now(), COUNT); }
   catch (e) { console.error(e); d = { error: true }; }
   if (pick !== p || ride) return;
   pickData = d; render();
@@ -192,10 +199,13 @@ async function refreshPick() {
 
 async function refreshRide() {
   const r = ride;
+  rideAt = 0;
+  board.querySelector('.reload')?.classList.add('is-wait');
   try {
     const d = await src.detail(r.key, r.from.id, r.to.id, Date.now());
     if (ride !== r) return;
     rideData = d;
+    if (!d.rtDown) rideAt = Date.now();
   } catch (e) {
     console.error(e);
     if (ride !== r) return;
@@ -277,15 +287,12 @@ function openPicker() {
 
 /* ---------- Eventos ---------- */
 
-$('add').addEventListener('click', openPicker);
 $('menu').addEventListener('click', () => { wipeAsk = false; openSettings(); });
 scrim.addEventListener('click', closeSheet);
 sheet.addEventListener('click', async ev => {
   if (ev.target.closest('[data-act=close]')) return closeSheet();
   if (ev.target.closest('[data-act=install]')) { await inst.install(); return; }
   if (open && open.kind === 'settings') {
-    const c = ev.target.closest('[data-count]');
-    if (c) { settings.count = +c.dataset.count; store.saveSettings(settings); paintSettings(`[data-count="${settings.count}"]`); if (view() === 'pick') refresh(); return; }
     if (ev.target.closest('[data-act=wipe]')) {
       if (!wipeAsk) { wipeAsk = true; return paintSettings('[data-act=wipe]'); }
       store.wipe(); location.reload();
