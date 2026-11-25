@@ -14,7 +14,7 @@ const toggle = (key, on, title, hint) => `<label class="sw">
 </label>`;
 
 const appText = {
-  prompt: '<button type="button" class="btn-add btn-add--big" data-act="install">Instalar la app</button><p class="fine">Se abre como una app más, sin barra del navegador.</p>',
+  prompt: '<p class="fine fine--first">Se abre como una app más, sin barra del navegador.</p><button type="button" class="btn-add btn-add--big btn-add--after" data-act="install">Instalar la app</button>',
   ios: '<p class="fine fine--first">En Safari: Compartir › Añadir a pantalla de inicio. Instalada, también puede avisarte al salir.</p>',
   none: '<p class="fine fine--first">Desde el menú del navegador: Instalar app o Añadir a pantalla de inicio.</p>',
 };
@@ -30,7 +30,7 @@ export function settingsHTML(s, info, wipeAsk, install = 'none') {
     <div class="sheet__scroll">
       <section>
         <h3 class="h-big">Trenecitos</h3>
-        <p class="about">Trenecitos muestra los próximos trenes de Cercanías Madrid. Usa los datos abiertos de Renfe Operadora (CC BY 4.0) pero no es una aplicación oficial.</p>
+        <p class="about">¿Llegas tarde al tren? Trenecitos muestra los próximos trenes de Cercanías Madrid. Usa los datos abiertos de Renfe Operadora (CC BY 4.0) pero no es una aplicación oficial.</p>
       </section>
       <section>
         <h3>Mi tren</h3>

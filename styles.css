@@ -331,6 +331,7 @@ svg { display: block; }
 .sw input:checked + .sw__ui { background: var(--accent); }
 .sw input:checked + .sw__ui::after { transform: translateX(20px); }
 .sw input:focus-visible + .sw__ui { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
+.btn-add--after { margin-top: 12px; }
 .btn-add--danger { margin-top: 12px; border-color: var(--rule); color: var(--red); }
 .btn-add--danger:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn-add.is-on { background: var(--accent); color: #fff; }
@@ -342,7 +343,7 @@ svg { display: block; }
 .sheet .h-big { font: 700 26px/1 var(--cond); letter-spacing: .09em; color: var(--ink); margin-bottom: 12px; }
 .credits { margin-top: 34px; text-align: center; }
 .credits p { font: 400 11.5px/1.45 var(--mono); color: var(--faint); }
-.credits .credits__by { margin-top: 4px; font: 500 14px/1.5 system-ui, sans-serif; color: var(--dim); }
+.credits .credits__by { margin-top: 4px; font: 500 14px/1.5 system-ui, sans-serif; color: var(--ink); }
 .credits a { color: var(--ink); text-decoration: none; }
 .favs__add { margin-top: 12px; }
 
