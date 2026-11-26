@@ -26,6 +26,16 @@ export function rideInfo(d, now) {
 /** Marca de tiempo (ms) tras la cual la tarjeta se retira sola. */
 export const rideExpiry = (ride, d) => (d ? d.train.estArr : ride.schedArr) + (d ? 4 : 40) * 60e3;
 
+/**
+ * Relleno (0–1) del tramo i de la barra del paso 3. k es el tramo en el que va el tren (-1: aún no ha salido):
+ * los anteriores, llenos; los siguientes, vacíos; el suyo, por tiempo entre sus dos paradas (sin llegar a tocarlas).
+ */
+export function progFill(times, k, i, now, stopped = false) {
+  if (i < k) return 1;
+  if (i > k || stopped) return 0;
+  return Math.min(.92, Math.max(.08, (now - times[i]) / Math.max(1, times[i + 1] - times[i])));
+}
+
 const cell = (k, v, cls = '', wide = false) => `<div class="ride__c${wide ? ' ride__c--wide' : ''}"><span>${k}</span><b${cls ? ` class="${cls}"` : ''}>${v}</b></div>`;
 
 export function rideHTML(ride, d, now) {
@@ -50,10 +60,12 @@ export function rideHTML(ride, d, now) {
         <div><p class="ride__lbl">${waiting ? `Sale${tag ? ' ' + tag : ''} a las` : 'Llegas a las'}</p><p class="ride__time">${hhmm(target)}</p></div>
         ${waiting && t.held ? '<div class="ride__eta is-soon is-long"><b>Sin salir</b></div>' : `<div class="ride__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${target}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</div>`}
       </div>`;
-    const span = Math.max(1, t.estArr - t.estDep);
-    const p = waiting ? 0 : Math.min(98, Math.max(2, ((now - t.estDep) / span) * 100));
-    const ticks = d.stops.slice(d.iFrom + 1, d.iTo).map(s => `<u style="left:${Math.min(98, Math.max(2, ((s.est - t.estDep) / span) * 100)).toFixed(1)}%"></u>`).join('');
-    prog = `<div class="prog" data-t0="${t.estDep}" data-t1="${t.estArr}" data-wait="${waiting ? 1 : 0}"><i style="width:${p.toFixed(1)}%"></i>${ticks}</div>
+    // Un tramo por cada salto entre paradas y un punto en cada hueco; se rellena hasta donde va el tren.
+    const times = d.stops.slice(d.iFrom, d.iTo + 1).map(s => s.est);
+    times[0] = t.estDep; times[times.length - 1] = t.estArr;
+    const k = waiting ? -1 : info.stoppedAt ? d.stops.indexOf(info.stoppedAt) - d.iFrom : d.stops.indexOf(info.next) - d.iFrom - 1;
+    const segs = times.slice(1).map((_, i) => `${i ? `<u${i <= k ? ' class="on"' : ''}></u>` : ''}<b><i style="width:${(progFill(times, k, i, now, !!info.stoppedAt) * 100).toFixed(1)}%"></i></b>`).join('');
+    prog = `<div class="prog" data-t="${times.join(',')}" data-k="${k}"${info.stoppedAt ? ' data-stop="1"' : ''}>${segs}</div>
       <div class="prog__ends"><span>${esc(ride.from.name)}</span><span>${esc(ride.to.name)}</span></div>`;
     if (waiting) {
       sub = `<p class="ride__sub">Llegas a ${esc(ride.to.name)} a las <b>${hhmm(t.estArr)}</b></p>`;
