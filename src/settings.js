@@ -21,7 +21,7 @@ const appText = {
 
 export function settingsHTML(s, info, wipeAsk, install = 'none') {
   const data = info && (info.built || info.first)
-    ? `Horarios de Renfe${info.first ? ` del ${day(info.first)} al ${day(info.last)}` : ''}${info.built ? ` · descargados ${stamp(info.built)}` : ''}. Se renuevan solos cada día.`
+    ? `Horarios de Renfe${info.first ? ` del ${day(info.first)} al ${day(info.last)}` : ''}${info.built ? ` · Descargados ${stamp(info.built)}` : ''} · Se renuevan solos cada día.`
     : 'Datos de demostración.';
   return `<div class="sheet__bar">
       <button type="button" class="icon-btn" data-act="close" aria-label="Cerrar">${'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>'}</button>

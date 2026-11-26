@@ -54,7 +54,8 @@ svg { display: block; }
 .brand h1 { font: 700 27px/1 var(--cond); letter-spacing: .09em; text-transform: uppercase; }
 .hdr-btn { display: grid; place-items: center; width: 48px; height: 44px; border-radius: 3px; color: #fff; }
 .hdr-btn svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
-.hdr-btn:hover, .hdr-btn:active { background: rgba(0, 0, 0, .18); }
+.hdr-btn:active { background: rgba(0, 0, 0, .18); }
+@media (hover: hover) { .hdr-btn:hover { background: rgba(0, 0, 0, .18); } }
 .top :focus-visible { outline-color: #fff; }
 
 .btn-add {
@@ -63,7 +64,8 @@ svg { display: block; }
   font: 600 16px/1 var(--cond); letter-spacing: .08em; text-transform: uppercase;
 }
 .btn-add svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
-.btn-add:hover { background: var(--accent); color: #fff; }
+.btn-add:active { background: var(--accent); color: #fff; }
+@media (hover: hover) { .btn-add:hover { background: var(--accent); color: #fff; } }
 .btn-add:disabled { border-color: var(--rule); color: var(--faint); background: none; cursor: default; }
 .btn-add--big { justify-content: center; width: 100%; padding: 14px; font-size: 18px; }
 
@@ -88,7 +90,8 @@ svg { display: block; }
 }
 .icon-btn svg { width: 16px; height: 16px; fill: currentColor; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .icon-btn svg path { fill: none; }
-.icon-btn:hover { color: var(--ink); background: var(--panel-2); }
+.icon-btn:active { color: var(--ink); background: var(--panel-2); }
+@media (hover: hover) { .icon-btn:hover { color: var(--ink); background: var(--panel-2); } }
 
 /* El trayecto: dos puntos unidos por una línea. El color cuenta cómo va el próximo tren
    (verde en hora, ámbar con retraso, rojo cancelado, gris sin datos). */
@@ -110,7 +113,8 @@ svg { display: block; }
   font: 600 14px/1 var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--dim);
 }
 .panel__menu button + button { border-left: 1px solid var(--rule); }
-.panel__menu button:hover { background: var(--panel-2); color: var(--ink); }
+.panel__menu button:active { background: var(--panel-2); color: var(--ink); }
+@media (hover: hover) { .panel__menu button:hover { background: var(--panel-2); color: var(--ink); } }
 .panel__menu svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .panel__menu .danger { color: var(--red); }
 
@@ -127,7 +131,8 @@ svg { display: block; }
 }
 
 .tr { position: relative; border-top: 1px solid var(--rule); }
-.tr:hover { background: var(--panel-2); }
+.tr:active { background: var(--panel-2); }
+@media (hover: hover) { .tr:hover { background: var(--panel-2); } }
 .tr__open {
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 12px; row-gap: 6px; align-items: center; width: 100%;
   padding: 13px 14px 12px;
@@ -138,7 +143,8 @@ svg { display: block; }
   font: 600 13px/1 var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--dim);
 }
 .tr__pin svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.tr__pin:hover { color: var(--ink); border-color: var(--dim); }
+.tr__pin:active { color: var(--ink); border-color: var(--dim); }
+@media (hover: hover) { .tr__pin:hover { color: var(--ink); border-color: var(--dim); } }
 .tr__pin.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .tr--pin .tr__state { padding-right: 100px; }
 .tr--mine { box-shadow: inset 3px 0 0 var(--accent); }
@@ -276,10 +282,12 @@ svg { display: block; }
   border: 1px solid var(--rule); border-radius: 2px; background: var(--bg); color: var(--dim);
 }
 .swap svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.swap:hover { color: var(--ink); border-color: var(--dim); }
+.swap:active { color: var(--ink); border-color: var(--dim); }
+@media (hover: hover) { .swap:hover { color: var(--ink); border-color: var(--dim); } }
 .results { list-style: none; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--rule); }
 .results button { display: block; width: 100%; padding: 12px 2px; border-bottom: 1px solid var(--rule); font: 600 20px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
-.results button:hover { color: var(--accent-hi); }
+.results button:active { color: var(--accent-hi); }
+@media (hover: hover) { .results button:hover { color: var(--accent-hi); } }
 .results__none { padding: 16px 2px; color: var(--dim); }
 
 /* ---------- Mi tren (tarjeta destacada) ---------- */
@@ -290,7 +298,8 @@ svg { display: block; }
 .ride__tag { display: inline-flex; align-items: center; gap: 8px; font: 600 13px/1 var(--cond); letter-spacing: .16em; text-transform: uppercase; color: var(--accent-hi); }
 .ride__tag i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(229, 32, 42, .3); }
 .ride__body { display: block; width: 100%; padding: 4px 14px 14px; }
-.ride__body:hover { background: rgba(255, 255, 255, .02); }
+.ride__body:active { background: rgba(255, 255, 255, .02); }
+@media (hover: hover) { .ride__body:hover { background: rgba(255, 255, 255, .02); } }
 .ride__who { display: flex; align-items: center; gap: 10px; }
 .ride__run { font: 700 20px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
 .ride__run span { color: var(--faint); font-weight: 500; }
@@ -333,7 +342,8 @@ svg { display: block; }
 .sw input:focus-visible + .sw__ui { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
 .btn-add--after { margin-top: 12px; }
 .btn-add--danger { margin-top: 12px; border-color: var(--rule); color: var(--red); }
-.btn-add--danger:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-add--danger:active { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (hover: hover) { .btn-add--danger:hover { background: var(--accent); border-color: var(--accent); color: #fff; } }
 .btn-add.is-on { background: var(--accent); color: #fff; }
 .btn-add.is-on svg { stroke: #fff; }
 .fine--first { margin-top: 0; }
@@ -389,27 +399,32 @@ svg { display: block; }
 .step__t { flex: 1; font: 700 22px/1.1 var(--cond); letter-spacing: .03em; text-transform: uppercase; }
 .step__back { display: grid; place-items: center; width: 40px; height: 40px; margin-left: -8px; margin-right: -4px; color: var(--dim); border-radius: 2px; }
 .step__back svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.step__back:hover { color: var(--ink); background: var(--panel-2); }
+.step__back:active { color: var(--ink); background: var(--panel-2); }
+@media (hover: hover) { .step__back:hover { color: var(--ink); background: var(--panel-2); } }
 .step__act {
   padding: 9px 12px; border: 1px solid var(--rule); border-radius: 2px; color: var(--dim);
   font: 600 14px/1 var(--cond); letter-spacing: .08em; text-transform: uppercase;
 }
-.step__act:hover { color: var(--ink); border-color: var(--dim); }
+.step__act:active { color: var(--ink); border-color: var(--dim); }
+@media (hover: hover) { .step__act:hover { color: var(--ink); border-color: var(--dim); } }
 
 /* Paso 1: cada viaje con sus dos sentidos */
 .favs { display: grid; gap: 12px; }
 .fav { display: grid; grid-template-columns: 34px minmax(0, 1fr) 40px; align-items: stretch; background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; }
 .fav__grip { display: grid; place-items: center; color: var(--faint); cursor: grab; touch-action: none; border-right: 1px solid var(--rule); }
 .fav__grip svg { width: 16px; height: 16px; fill: currentColor; }
-.fav__grip:hover { color: var(--dim); }
+.fav__grip:active { color: var(--dim); }
+@media (hover: hover) { .fav__grip:hover { color: var(--dim); } }
 .fav__dirs { display: grid; }
 .fav__go {
   display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); align-items: center; gap: 10px; text-align: left;
   min-height: 60px; padding: 10px 12px; font: 700 21px/1.05 var(--cond); letter-spacing: .02em; text-transform: uppercase;
 }
 .fav__go + .fav__go { border-top: 1px solid var(--rule); }
-.fav__go:hover { background: var(--panel-2); }
-.fav__go:hover .fav__to { color: var(--accent-hi); }
+.fav__go:active { background: var(--panel-2); }
+@media (hover: hover) { .fav__go:hover { background: var(--panel-2); } }
+.fav__go:active .fav__to { color: var(--accent-hi); }
+@media (hover: hover) { .fav__go:hover .fav__to { color: var(--accent-hi); } }
 .fav__a, .fav__b { overflow-wrap: normal; }   /* fitNames() reduce la letra si un nombre no cabe; solo parte la palabra como último recurso */
 .fav__to { color: var(--faint); }
 .fav__to svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -420,8 +435,10 @@ svg { display: block; }
 
 /* Paso 2: toda la fila elige el tren */
 .tr__open:disabled { cursor: default; }
-.tr__open:not(:disabled):hover .tr__dep { color: var(--accent-hi); }
-.tr--off:hover { background: none; }
+.tr__open:not(:disabled):active .tr__dep { color: var(--accent-hi); }
+@media (hover: hover) { .tr__open:not(:disabled):hover .tr__dep { color: var(--accent-hi); } }
+.tr--off:active { background: none; }
+@media (hover: hover) { .tr--off:hover { background: none; } }
 
 /* Paso 3: más datos bajo la tarjeta */
 .more__run { margin-bottom: 8px; font: 400 12px/1.3 var(--mono); color: var(--dim); text-transform: uppercase; }
