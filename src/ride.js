@@ -26,16 +26,6 @@ export function rideInfo(d, now) {
 /** Marca de tiempo (ms) tras la cual la tarjeta se retira sola. */
 export const rideExpiry = (ride, d) => (d ? d.train.estArr : ride.schedArr) + (d ? 4 : 40) * 60e3;
 
-/**
- * Relleno (0–1) del tramo i de la barra del paso 3. k es el tramo en el que va el tren (-1: aún no ha salido):
- * los anteriores, llenos; los siguientes, vacíos; el suyo, por tiempo entre sus dos paradas (sin llegar a tocarlas).
- */
-export function progFill(times, k, i, now, stopped = false) {
-  if (i < k) return 1;
-  if (i > k || stopped) return 0;
-  return Math.min(.92, Math.max(.08, (now - times[i]) / Math.max(1, times[i + 1] - times[i])));
-}
-
 const cell = (k, v, cls = '', wide = false) => `<div class="ride__c${wide ? ' ride__c--wide' : ''}"><span>${k}</span><b${cls ? ` class="${cls}"` : ''}>${v}</b></div>`;
 
 export function rideHTML(ride, d, now) {
@@ -44,7 +34,7 @@ export function rideHTML(ride, d, now) {
   if (!d) return `<section class="ride"><div class="ride__body"><div class="ride__who">${who}</div><p class="ride__sub">Cargando…</p></div></section>`;
 
   const t = d.train, info = rideInfo(d, now), dl = delayInfo(t.delay);
-  let main, sub = '', cells = '', prog = '', waiting3 = false;
+  let main, sub = '', cells = '', waiting3 = false;
 
   if (info.phase === 'cancelled') {
     main = '<p class="ride__big ride__big--bad">Tren cancelado</p>';
@@ -60,13 +50,6 @@ export function rideHTML(ride, d, now) {
         <div><p class="ride__lbl">${waiting ? `Sale${tag ? ' ' + tag : ''} a las` : 'Llegas a las'}</p><p class="ride__time">${hhmm(target)}</p></div>
         ${waiting && t.held ? '<div class="ride__eta is-soon is-long"><b>Sin salir</b></div>' : `<div class="ride__eta${e.soon ? ' is-soon' : ''}${e.long ? ' is-long' : ''}" data-eta="${target}" data-k="${esc(etaKey(e))}">${etaHTML(e)}</div>`}
       </div>`;
-    // Un tramo por cada salto entre paradas y un punto en cada hueco; se rellena hasta donde va el tren.
-    const times = d.stops.slice(d.iFrom, d.iTo + 1).map(s => s.est);
-    times[0] = t.estDep; times[times.length - 1] = t.estArr;
-    const k = waiting ? -1 : info.stoppedAt ? d.stops.indexOf(info.stoppedAt) - d.iFrom : d.stops.indexOf(info.next) - d.iFrom - 1;
-    const segs = times.slice(1).map((_, i) => `${i ? `<u${i <= k ? ' class="on"' : ''}></u>` : ''}<b><i${i === k && !info.stoppedAt ? ' class="run"' : ''} style="width:${(progFill(times, k, i, now, !!info.stoppedAt) * 100).toFixed(1)}%"></i></b>`).join('');
-    prog = `<div class="prog" data-t="${times.join(',')}" data-k="${k}"${info.stoppedAt ? ' data-stop="1"' : ''}>${segs}</div>
-      <div class="prog__ends"><span>${esc(ride.from.name)}</span><span>${esc(ride.to.name)}</span></div>`;
     if (waiting) {
       sub = `<p class="ride__sub">Llegas a ${esc(ride.to.name)} a las <b>${hhmm(t.estArr)}</b></p>`;
       waiting3 = true;
@@ -83,7 +66,7 @@ export function rideHTML(ride, d, now) {
   return `<section class="ride ride--${info.phase}">
     <div class="ride__body">
       <div class="ride__who">${who}</div>
-      ${main}${sub}${prog}
+      ${main}${sub}
       ${cells ? `<div class="ride__cells${waiting3 ? ' ride__cells--3' : ''}">${cells}</div>` : ''}
       ${lost}
     </div>

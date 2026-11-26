@@ -1,7 +1,7 @@
 import * as store from './store.js';
 import { etaParts, etaKey, etaHTML, hhmm } from './format.js';
 import { tripsViewHTML, pickViewHTML, detailBodyHTML, stepHTML } from './ui.js';
-import { rideHTML, rideInfo, rideExpiry, progFill } from './ride.js';
+import { rideHTML, rideInfo, rideExpiry } from './ride.js';
 import { settingsHTML } from './settings.js';
 import { pickerHTML, initPicker } from './picker.js';
 import { initNav, ask, sync } from './nav.js';
@@ -171,12 +171,6 @@ function tick() {
     if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = etaHTML(e); }
     el.classList.toggle('is-soon', e.soon);
     el.classList.toggle('is-long', e.long);
-  });
-  document.querySelectorAll('.prog').forEach(el => {
-    const times = el.dataset.t.split(',').map(Number), k = +el.dataset.k;
-    if (k < 0 || el.dataset.stop) return;
-    const i = el.querySelectorAll('i')[k];
-    if (i) i.style.width = (progFill(times, k, k, now) * 100).toFixed(1) + '%';
   });
 }
 
