@@ -315,6 +315,10 @@ svg { display: block; }
 .prog { display: flex; align-items: center; gap: 6px; margin-top: 16px; }
 .prog b { position: relative; flex: 1; height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
 .prog i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); transition: width .6s linear; }
+/* Tramo en curso: el rojo sale una y otra vez de su inicio hasta donde va el tren. */
+.prog i.run { transform-origin: left; animation: prog-run 1.8s cubic-bezier(.3, 0, .2, 1) infinite; }
+@keyframes prog-run { 0% { transform: scaleX(0); } 70%, 100% { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .prog i.run { animation: none; } }
 .prog u { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--rule); }
 .prog u.on { background: var(--accent); }
 .prog__ends { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; font: 400 10.5px/1.2 var(--mono); color: var(--faint); text-transform: uppercase; letter-spacing: .04em; }

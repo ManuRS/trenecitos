@@ -64,7 +64,7 @@ export function rideHTML(ride, d, now) {
     const times = d.stops.slice(d.iFrom, d.iTo + 1).map(s => s.est);
     times[0] = t.estDep; times[times.length - 1] = t.estArr;
     const k = waiting ? -1 : info.stoppedAt ? d.stops.indexOf(info.stoppedAt) - d.iFrom : d.stops.indexOf(info.next) - d.iFrom - 1;
-    const segs = times.slice(1).map((_, i) => `${i ? `<u${i <= k ? ' class="on"' : ''}></u>` : ''}<b><i style="width:${(progFill(times, k, i, now, !!info.stoppedAt) * 100).toFixed(1)}%"></i></b>`).join('');
+    const segs = times.slice(1).map((_, i) => `${i ? `<u${i <= k ? ' class="on"' : ''}></u>` : ''}<b><i${i === k && !info.stoppedAt ? ' class="run"' : ''} style="width:${(progFill(times, k, i, now, !!info.stoppedAt) * 100).toFixed(1)}%"></i></b>`).join('');
     prog = `<div class="prog" data-t="${times.join(',')}" data-k="${k}"${info.stoppedAt ? ' data-stop="1"' : ''}>${segs}</div>
       <div class="prog__ends"><span>${esc(ride.from.name)}</span><span>${esc(ride.to.name)}</span></div>`;
     if (waiting) {
