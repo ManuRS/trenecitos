@@ -55,10 +55,9 @@ export function rideHTML(ride, d, now) {
       waiting3 = true;
       cells = cell('Vía', t.platform ? esc(t.platform) : d.here.platform ? esc(d.here.platform) : '—') + cell('Retraso', t.delay == null ? '—' : esc(dl.short), `kv--${dl.cls}`) + cell('Paradas', String(t.hops));
     } else {
-      const next = info.next, last = info.left === 1;
-      sub = info.stoppedAt ? `<p class="ride__sub">Parado en ${esc(info.stoppedAt.name)}</p>` : '';
-      cells = cell('Siguiente parada', `${esc(next.name)} <small>${hhmm(next.est)}</small>`, '', true)
-            + cell('Quedan', last ? 'Bajas aquí' : `${info.left} paradas`, last ? 'warnc' : '')
+      // Dónde va y a qué hora llega a la siguiente parada lo dice "Ahora", justo debajo.
+      const last = info.left === 1;
+      cells = cell('Quedan', last ? 'Bajas aquí' : `${info.left} paradas`, last ? 'warnc' : '')
             + cell('Retraso', t.delay == null ? '—' : esc(dl.short), `kv--${dl.cls}`);
     }
   }

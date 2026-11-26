@@ -138,7 +138,7 @@ export function detailBodyHTML(d, now, bar = '') {
 
   const nowLine = d.here.kind === 'cancelled' ? '' : `<section class="now">
       <h3>Ahora</h3>
-      <p class="now__text">${esc(d.here.text)}</p>
+      <p class="now__text">${esc(d.here.text)}${(d.here.kind === 'moving' || d.here.kind === 'incoming') && d.stops[d.vi] ? `<small>${hhmm(d.stops[d.vi].est)}</small>` : ''}</p>
       <p class="now__meta">${[
         d.here.platform ? `vía ${d.here.platform}` : '',
         d.here.state || '',

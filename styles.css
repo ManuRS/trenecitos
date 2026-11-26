@@ -234,6 +234,7 @@ svg { display: block; }
 .now h3 { margin-bottom: 8px; }
 .now__text { font: 700 24px/1.1 var(--cond); letter-spacing: .02em; text-transform: uppercase; }
 .now__text--bad { color: var(--red); }
+.now__text small { margin-left: 8px; font: 500 15px/1 var(--mono); color: var(--dim); letter-spacing: 0; }
 .now__meta { margin-top: 6px; font: 400 12px/1.4 var(--mono); color: var(--dim); }
 
 .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -297,7 +298,7 @@ svg { display: block; }
 .ride__bar .icon-btn { margin-top: 0; }
 .ride__tag { display: inline-flex; align-items: center; gap: 8px; font: 600 13px/1 var(--cond); letter-spacing: .16em; text-transform: uppercase; color: var(--accent-hi); }
 .ride__tag i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(229, 32, 42, .3); }
-.ride__body { display: block; width: 100%; padding: 4px 14px 14px; }
+.ride__body { display: block; width: 100%; padding: 14px; }
 .ride__body:active { background: rgba(255, 255, 255, .02); }
 @media (hover: hover) { .ride__body:hover { background: rgba(255, 255, 255, .02); } }
 .ride__who { display: flex; align-items: center; gap: 10px; }
