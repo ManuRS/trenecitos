@@ -7,7 +7,7 @@
 <p>
   <img src="img/paso-1.png" width="250" alt="Paso 1: tus viajes, cada uno con sus dos sentidos">
   <img src="img/paso-2.png" width="250" alt="Paso 2: los próximos trenes con su retraso y cuenta atrás">
-  <img src="img/paso-3.png" width="250" alt="Paso 3: tu tren, con la hora de salida, la vía y el recorrido">
+  <img src="img/paso-3.png" width="250" alt="Paso 3: tu tren, con la hora de llegada, las paradas que quedan y el recorrido">
 </p>
 
 ## Cómo funciona
